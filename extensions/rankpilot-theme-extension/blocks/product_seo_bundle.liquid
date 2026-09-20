@@ -1,0 +1,78 @@
+{% comment %}
+  RankPilot Theme App Block: AI Overview Spec Matrix & Conversational Buyer FAQs
+  Guaranteed 0ms JavaScript footprint: Pure semantic HTML5 + CSS.
+{% endcomment %}
+
+<div class="rankpilot-theme-bundle" style="margin: 24px 0; font-family: inherit;">
+  {% if block.settings.show_spec_matrix and product.metafields.rankpilot.spec_matrix != blank %}
+    <div class="rankpilot-matrix-section" style="margin-bottom: 24px;">
+      <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 12px; color: {{ block.settings.heading_color }};">
+        {{ block.settings.matrix_heading }}
+      </h3>
+      <div class="rankpilot-matrix-content" style="overflow-x: auto;">
+        {{ product.metafields.rankpilot.spec_matrix }}
+      </div>
+    </div>
+  {% endif %}
+
+  {% if block.settings.show_faqs and product.metafields.rankpilot.faq_json != blank %}
+    <div class="rankpilot-faq-section">
+      <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 12px; color: {{ block.settings.heading_color }};">
+        {{ block.settings.faq_heading }}
+      </h3>
+      {% assign faqs = product.metafields.rankpilot.faq_json.value %}
+      <div class="rankpilot-faq-list" style="display: flex; flex-direction: column; gap: 10px;">
+        {% for faq in faqs %}
+          <details style="border: 1px solid #e1e3e5; border-radius: 8px; padding: 12px 16px; background-color: #fafbfc;">
+            <summary style="font-weight: 600; cursor: pointer; color: {{ block.settings.heading_color }}; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+              <span>{{ faq.question }}</span>
+              <span style="font-size: 14px; opacity: 0.6;">+</span>
+            </summary>
+            <p style="margin-top: 10px; margin-bottom: 0; font-size: 14px; line-height: 1.5; color: #4a4f54;">
+              {{ faq.answer }}
+            </p>
+          </details>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+{% schema %}
+{
+  "name": "RankPilot Spec & FAQ Bundle",
+  "target": "section",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_spec_matrix",
+      "label": "Show AI Specification Matrix",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "matrix_heading",
+      "label": "Matrix Heading",
+      "default": "Technical Specifications & Comparison"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_faqs",
+      "label": "Show Conversational Buyer FAQs",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "faq_heading",
+      "label": "FAQ Heading",
+      "default": "Frequently Asked Questions"
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Heading Color",
+      "default": "#1a1a1a"
+    }
+  ]
+}
+{% endschema %}

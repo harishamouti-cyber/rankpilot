@@ -1,0 +1,187 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+}
+
+model StoreConfig {
+  id                 String   @id @default(uuid())
+  shop               String   @unique
+  isOnboarded        Boolean  @default(false)
+  zeroClickAutopilot Boolean  @default(false)
+  planTier           String   @default("STARTER") // STARTER ($19), PRO ($49), SCALE ($79)
+  subscriptionId     String?
+  gscConnected       Boolean  @default(false)
+  gscPropertyId      String?
+  gscRefreshToken    String?
+  viralBadgeEnabled  Boolean  @default(false)
+  weeklyDigestEmail  String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model ProductOptimization {
+  id                String            @id @default(uuid())
+  shop              String
+  productId         String            @unique
+  productHandle     String?
+  productTitle      String?
+  title             String?
+  handle            String?
+  status            String            @default("NEEDS_OPTIMIZATION") // NEEDS_OPTIMIZATION, AI_READY
+  geoScore          Int               @default(38)
+  aiScore           Int               @default(38)
+  originalTitle     String?
+  originalBodyHtml  String?
+  originalDescription String?
+  optimizedTitle    String?
+  optimizedMetaDesc String?
+  specTableHtml     String?
+  specMatrixHtml    String?
+  faqJson           String?           // Serialized JSON of 3 conversational Q&As
+  schemaJson        String?           // Serialized JSON-LD Product schema
+  aiOverviewPreview String?           // Cached simulated AEO snippet
+  lastOptimizedAt   DateTime?
+  revisions         RevisionHistory[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@unique([shop, productId])
+}
+
+model RevisionHistory {
+  id                    String               @id @default(uuid())
+  shop                  String
+  productId             String
+  productOptimizationId String?
+  productOptimization   ProductOptimization? @relation(fields: [productOptimizationId], references: [id], onDelete: Cascade)
+  snapshotTitle         String?
+  snapshotBodyHtml      String?
+  snapshotMetaDesc      String?
+  snapshotMetafields    String?              // Serialized JSON of prior custom metafields
+  titleSnapshot         String?
+  bodyHtmlSnapshot      String?
+  seoTitleSnapshot      String?
+  seoDescriptionSnapshot String?
+  metafieldsSnapshot    String?
+  rolledBack            Boolean              @default(false)
+  createdAt             DateTime             @default(now())
+}
+
+model StrikingDistanceQuery {
+  id          String   @id @default(uuid())
+  shop        String
+  productId   String
+  query       String
+  impressions Int
+  clicks      Int
+  position    Float
+  ctr         Float
+  status      String   @default("PENDING") // PENDING, BOOSTED, DISMISSED
+  createdAt   DateTime @default(now())
+}
+
+model StockoutRedirect {
+  id                String   @id @default(uuid())
+  shop              String
+  productId         String
+  productHandle     String
+  targetPath        String
+  shopifyRedirectId String?
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+}
+
+model CompetitorTracker {
+  id               String   @id @default(uuid())
+  shop             String
+  productId        String
+  competitorUrl    String
+  lastPrice        Float?
+  lastEntities     String?  // JSON array of parsed semantic entities
+  reviewWeaknesses String?  // JSON array of extracted 2/3 star consumer friction points
+  lastScannedAt    DateTime @default(now())
+}
+
+model PerformanceDigest {
+  id                 String   @id @default(uuid())
+  shop               String
+  weekStartDate      DateTime
+  pingsDispatched    Int      @default(0)
+  schemaImpressions  Int      @default(0)
+  redirectsProtected Int      @default(0)
+  croBaselineConv    Float    @default(0.0)
+  croPostOptConv     Float    @default(0.0)
+}
+
+// Retained for backwards compatibility with existing log queries
+model AppSetting {
+  id                         String    @id @default(uuid())
+  shop                       String    @unique
+  plan                       String    @default("SCALE") // STARTER, PRO, SCALE
+  status                     String    @default("ACTIVE")
+  subscriptionId             String?
+  subscriptionConfirmationUrl String?
+  trialEndsAt                DateTime?
+  isOnboarded                Boolean   @default(false)
+  geminiApiKey               String?
+  indexNowKey                String?
+  autoPingIndexNow           Boolean   @default(true)
+  autopilotEnabled           Boolean   @default(true)
+  storeDomain                String?
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
+}
+
+model IndexNowLog {
+  id         String   @id @default(uuid())
+  shop       String
+  url        String
+  keyUsed    String
+  status     String
+  statusCode Int?
+  response   String?
+  createdAt  DateTime @default(now())
+}
+
+model AutopilotLog {
+  id         String   @id @default(uuid())
+  shop       String
+  productId  String
+  actionType String
+  details    String
+  timestamp  DateTime @default(now())
+}
+
+model CitationMetric {
+  id              String   @id @default(uuid())
+  shop            String
+  query           String
+  engine          String
+  rankPosition    Int
+  isCited         Boolean  @default(true)
+  competitorCited String?
+  snippet         String?
+  recordedAt      DateTime @default(now())
+}

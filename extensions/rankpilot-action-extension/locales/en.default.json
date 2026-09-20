@@ -1,0 +1,10 @@
+{
+  "name": "RankPilot GEO Optimize",
+  "action_title": "Optimize with RankPilot",
+  "description": "Enrich product schema, spec matrix, and conversational FAQ with 0ms theme impact.",
+  "optimize_button": "⚡ Generate GEO Enrichment",
+  "analyzing": "Analyzing product specifications...",
+  "ready_badge": "AI & Google Ready",
+  "unranked_badge": "Needs Optimization",
+  "view_in_app": "Open Full Diff in RankPilot"
+}

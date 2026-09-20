@@ -1,0 +1,240 @@
+{% comment %}
+  RankPilot Online Store 2.0 Theme App Extension
+  Block: FAQ Accordion & Technical Spec Matrix
+  Features:
+  - 0ms JavaScript footprint (Pure HTML5 <details> & <summary> + inline CSS)
+  - Reads directly from product.metafields.rankpilot.faq_json.value
+  - Reads directly from product.metafields.rankpilot.spec_table.value
+  - Injects Schema.org JSON-LD structured data for Google AI Overviews & ChatGPT Search
+{% endcomment %}
+
+{% assign schema_data = product.metafields.rankpilot.schema_json.value | default: product.metafields.rankpilot.schema_json %}
+{% assign spec_data = product.metafields.rankpilot.spec_table.value | default: product.metafields.rankpilot.spec_matrix.value | default: product.metafields.rankpilot.spec_matrix %}
+{% assign faq_data = product.metafields.rankpilot.faq_json.value | default: product.metafields.rankpilot.faq_json %}
+
+<style>
+  .rankpilot-storefront-wrapper {
+    margin: 24px 0;
+    width: 100%;
+    font-family: inherit;
+  }
+  .rankpilot-spec-section {
+    margin-bottom: 28px;
+    width: 100%;
+  }
+  .rankpilot-spec-heading, .rankpilot-faq-heading {
+    font-size: {{ block.settings.font_size | plus: 3 }}px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    color: {{ block.settings.text_color }};
+  }
+  .rankpilot-spec-table-container {
+    overflow-x: auto;
+    border-radius: {{ block.settings.border_radius }}px;
+    border: 1px solid {{ block.settings.border_color }};
+    background-color: #ffffff;
+  }
+  .rankpilot-spec-table-container table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: {{ block.settings.font_size }}px;
+    text-align: left;
+  }
+  .rankpilot-spec-table-container th {
+    background-color: {{ block.settings.bg_color }};
+    color: {{ block.settings.text_color }};
+    font-weight: 600;
+    padding: 12px 16px;
+    border-bottom: 1px solid {{ block.settings.border_color }};
+  }
+  .rankpilot-spec-table-container td {
+    padding: 12px 16px;
+    border-bottom: 1px solid {{ block.settings.border_color }};
+    color: {{ block.settings.text_color }};
+    line-height: 1.5;
+  }
+  .rankpilot-spec-table-container tr:last-child td {
+    border-bottom: none;
+  }
+  .rankpilot-faq-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+  .rankpilot-faq-item {
+    border: 1px solid {{ block.settings.border_color }};
+    border-radius: {{ block.settings.border_radius }}px;
+    background-color: {{ block.settings.bg_color }};
+    padding: 14px 18px;
+    transition: all 0.2s ease-in-out;
+  }
+  .rankpilot-faq-item[open] {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+  .rankpilot-faq-question {
+    font-size: {{ block.settings.font_size }}px;
+    font-weight: 600;
+    cursor: pointer;
+    color: {{ block.settings.text_color }};
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+  }
+  .rankpilot-faq-question::-webkit-details-marker {
+    display: none;
+  }
+  .rankpilot-faq-icon {
+    font-size: 16px;
+    font-weight: 400;
+    color: {{ block.settings.text_color }};
+    opacity: 0.6;
+    transition: transform 0.2s ease;
+  }
+  .rankpilot-faq-item[open] .rankpilot-faq-icon {
+    transform: rotate(45deg);
+  }
+  .rankpilot-faq-answer {
+    margin-top: 10px;
+    margin-bottom: 0;
+    font-size: {{ block.settings.font_size | minus: 1 }}px;
+    line-height: 1.6;
+    color: {{ block.settings.text_color }};
+    opacity: 0.85;
+  }
+</style>
+
+<div class="rankpilot-storefront-wrapper">
+  {% comment %} 1. Inject Schema.org JSON-LD for AI Search Engines {% endcomment %}
+  {% if block.settings.inject_schema and schema_data != blank %}
+    <script type="application/ld+json">
+      {{ schema_data }}
+    </script>
+  {% endif %}
+
+  {% comment %} 2. High-Density Specification Matrix {% endcomment %}
+  {% if block.settings.show_spec_matrix and spec_data != blank %}
+    <div class="rankpilot-spec-section">
+      {% if block.settings.spec_heading != blank %}
+        <h3 class="rankpilot-spec-heading">{{ block.settings.spec_heading }}</h3>
+      {% endif %}
+      <div class="rankpilot-spec-table-container">
+        {{ spec_data }}
+      </div>
+    </div>
+  {% endif %}
+
+  {% comment %} 3. Conversational Buyer FAQs Accordion {% endcomment %}
+  {% if block.settings.show_faqs and faq_data != blank %}
+    <div class="rankpilot-faq-section">
+      {% if block.settings.faq_heading != blank %}
+        <h3 class="rankpilot-faq-heading">{{ block.settings.faq_heading }}</h3>
+      {% endif %}
+      <div class="rankpilot-faq-container">
+        {% for faq in faq_data %}
+          <details class="rankpilot-faq-item">
+            <summary class="rankpilot-faq-question">
+              <span>{{ faq.question }}</span>
+              <span class="rankpilot-faq-icon">+</span>
+            </summary>
+            <p class="rankpilot-faq-answer">
+              {{ faq.answer }}
+            </p>
+          </details>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+{% schema %}
+{
+  "name": "RankPilot FAQ & Spec Blocks",
+  "target": "section",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "inject_schema",
+      "label": "Inject Schema.org JSON-LD",
+      "default": true,
+      "info": "Embeds rich structured data for Google AI Overviews and ChatGPT Search"
+    },
+    {
+      "type": "header",
+      "content": "Specification Matrix"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_spec_matrix",
+      "label": "Show Spec Matrix Table",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "spec_heading",
+      "label": "Spec Section Heading",
+      "default": "Technical Specifications & Comparison"
+    },
+    {
+      "type": "header",
+      "content": "Conversational Buyer FAQs"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_faqs",
+      "label": "Show Buyer FAQ Accordion",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "faq_heading",
+      "label": "FAQ Section Heading",
+      "default": "Frequently Asked Questions"
+    },
+    {
+      "type": "header",
+      "content": "Styling & Customization"
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Accordion Background",
+      "default": "#fafbfc"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text & Heading Color",
+      "default": "#1a1a1a"
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "Border Color",
+      "default": "#e1e3e5"
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "label": "Border Radius",
+      "min": 0,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "default": 8
+    },
+    {
+      "type": "range",
+      "id": "font_size",
+      "label": "Base Font Size",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "default": 15
+    }
+  ]
+}
+{% endschema %}

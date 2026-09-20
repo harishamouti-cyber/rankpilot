@@ -1,0 +1,10 @@
+api_version = "2024-10"
+
+[[extensions]]
+name = "RankPilot GEO Optimize"
+handle = "rankpilot-action-extension"
+type = "ui_extension"
+
+[[extensions.targeting]]
+module = "./src/ActionExtension.tsx"
+target = "admin.product-details.action.render"

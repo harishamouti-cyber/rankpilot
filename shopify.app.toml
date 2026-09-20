@@ -1,0 +1,50 @@
+# Shopify App Configuration for RankPilot
+# https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "rankpilot_client_id_2026"
+name = "RankPilot"
+handle = "rankpilot"
+application_url = "https://rankpilot.fly.dev"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "demo.myshopify.com"
+
+[access_scopes]
+# Required permissions for updating Product titles, descriptions, inventory, and Metafield schemas
+scopes = "read_products,write_products,read_inventory,write_inventory,read_themes,write_themes"
+
+[auth]
+redirect_urls = [
+  "https://rankpilot.fly.dev/auth/callback",
+  "https://rankpilot.fly.dev/auth/shopify/callback",
+  "https://rankpilot.fly.dev/api/auth/callback"
+]
+
+[webhooks]
+api_version = "2025-01"
+
+  [webhooks.privacy_compliance]
+  customer_data_request_url = "https://rankpilot.fly.dev/webhooks/customers/data_request"
+  customer_deletion_url = "https://rankpilot.fly.dev/webhooks/customers/redact"
+  shop_deletion_url = "https://rankpilot.fly.dev/webhooks/shop/redact"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
+  [[webhooks.subscriptions]]
+  topics = [ "inventory_levels/update" ]
+  uri = "/webhooks/inventory_levels/update"
+
+  [[webhooks.subscriptions]]
+  topics = [ "products/create" ]
+  uri = "/webhooks/products/create"
+
+  [[webhooks.subscriptions]]
+  topics = [ "products/update" ]
+  uri = "/webhooks/products/update"
+
+[pos]
+embedded = false

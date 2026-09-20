@@ -1,0 +1,15 @@
+node_modules
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+!.env.production.example
+dev.sqlite
+dev.sqlite-journal
+build
+public/reviewer-demo.mp4
+*.log
+.DS_Store
+scripts/record-demo.ts
+test-*.ts

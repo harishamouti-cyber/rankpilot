@@ -1,0 +1,16 @@
+node_modules/
+.env
+.env.*
+!.env.example
+!.env.production.example
+build/
+.cache/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite-journal
+dev.sqlite
+dev.sqlite-journal
+.DS_Store
+*.log
+videos_temp/
