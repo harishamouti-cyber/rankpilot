@@ -237,9 +237,9 @@ All test plans include a 7-day free trial on the PRO tier.
 ---
 
 ## 🔒 STEP 6: PRIVACY & LEGAL URLS
-- **Privacy Policy URL:** `https://rankpilot.fly.dev/privacy` (or your store/domain privacy URL)
-- **Support URL:** `https://rankpilot.fly.dev/support`
-- **Support Email:** `support@rankpilot.app` (or your developer email)
+- **Privacy Policy URL:** `https://rankpilot-five-tan.vercel.app/privacy`
+- **Support URL:** `https://rankpilot-five-tan.vercel.app/support`
+- **Support Email:** `support@rankpilot.app`
 
 ---
 

@@ -4,7 +4,7 @@
 client_id = "rankpilot_client_id_2026"
 name = "RankPilot"
 handle = "rankpilot"
-application_url = "https://rankpilot.fly.dev"
+application_url = "https://rankpilot-five-tan.vercel.app"
 embedded = true
 
 [build]
@@ -17,18 +17,18 @@ scopes = "read_products,write_products,read_inventory,write_inventory,read_theme
 
 [auth]
 redirect_urls = [
-  "https://rankpilot.fly.dev/auth/callback",
-  "https://rankpilot.fly.dev/auth/shopify/callback",
-  "https://rankpilot.fly.dev/api/auth/callback"
+  "https://rankpilot-five-tan.vercel.app/auth/callback",
+  "https://rankpilot-five-tan.vercel.app/auth/shopify/callback",
+  "https://rankpilot-five-tan.vercel.app/api/auth/callback"
 ]
 
 [webhooks]
 api_version = "2025-01"
 
   [webhooks.privacy_compliance]
-  customer_data_request_url = "https://rankpilot.fly.dev/webhooks/customers/data_request"
-  customer_deletion_url = "https://rankpilot.fly.dev/webhooks/customers/redact"
-  shop_deletion_url = "https://rankpilot.fly.dev/webhooks/shop/redact"
+  customer_data_request_url = "https://rankpilot-five-tan.vercel.app/webhooks/customers/data_request"
+  customer_deletion_url = "https://rankpilot-five-tan.vercel.app/webhooks/customers/redact"
+  shop_deletion_url = "https://rankpilot-five-tan.vercel.app/webhooks/shop/redact"
 
   [[webhooks.subscriptions]]
   topics = [ "app/uninstalled" ]
