@@ -70,32 +70,42 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const aiReadyProducts = products.filter((p) => isOptimized(p.optimizationStatus));
   const aiReadyPercentage = totalProducts > 0 ? Math.round((aiReadyProducts.length / totalProducts) * 100) : 0;
 
-  const indexPingsCount = await db.indexNowLog.count({ where: { shop } });
-  const storedRevisionsCount = await db.revisionHistory.count({ where: { shop } });
-  const recentIndexNowLogs = await db.indexNowLog.findMany({
-    where: { shop },
-    orderBy: { createdAt: "desc" },
-    take: 8,
-  });
+  let indexPingsCount = 0;
+  let storedRevisionsCount = 0;
+  let recentIndexNowLogs: any[] = [];
+  let setting: any = null;
+  let strikingQueries: any[] = [];
+  let digest: any = null;
+  let driftAudit: any = null;
 
-  const setting = await db.appSetting.findUnique({ where: { shop } });
-  const strikingQueries = await getStrikingDistanceQueries(shop);
-  const rawDigest = await db.performanceDigest.findFirst({
-    where: { shop },
-    orderBy: { weekStartDate: "desc" },
-  });
-  const digest = rawDigest
-    ? {
-        weekStartDate: rawDigest.weekStartDate.toISOString(),
-        pingsDispatched: rawDigest.pingsDispatched,
-        schemaImpressions: rawDigest.schemaImpressions,
-        redirectsProtected: rawDigest.redirectsProtected,
-        croBaselineConv: rawDigest.croBaselineConv,
-        croPostOptConv: rawDigest.croPostOptConv,
-      }
-    : null;
-
-  const driftAudit = await auditCatalogForDrift(shop);
+  try {
+    indexPingsCount = await db.indexNowLog.count({ where: { shop } });
+    storedRevisionsCount = await db.revisionHistory.count({ where: { shop } });
+    recentIndexNowLogs = await db.indexNowLog.findMany({
+      where: { shop },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+    });
+    setting = await db.appSetting.findUnique({ where: { shop } });
+    strikingQueries = await getStrikingDistanceQueries(shop);
+    const rawDigest = await db.performanceDigest.findFirst({
+      where: { shop },
+      orderBy: { weekStartDate: "desc" },
+    });
+    digest = rawDigest
+      ? {
+          weekStartDate: rawDigest.weekStartDate.toISOString(),
+          pingsDispatched: rawDigest.pingsDispatched,
+          schemaImpressions: rawDigest.schemaImpressions,
+          redirectsProtected: rawDigest.redirectsProtected,
+          croBaselineConv: rawDigest.croBaselineConv,
+          croPostOptConv: rawDigest.croPostOptConv,
+        }
+      : null;
+    driftAudit = await auditCatalogForDrift(shop);
+  } catch (dbErr) {
+    console.warn("[App Dashboard Loader] Database query notice:", dbErr);
+  }
 
   return json({
     shop,

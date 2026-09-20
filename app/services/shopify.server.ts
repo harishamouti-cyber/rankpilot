@@ -443,15 +443,20 @@ export async function getShopifyProducts(
   adminClient?: any
 ): Promise<ShopifyProductItem[]> {
   // Check if we have optimizations in local SQLite DB
-  const storedOptimizations = await db.productOptimization.findMany({
-    where: { shop },
-    include: {
-      revisions: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
+  let storedOptimizations: any[] = [];
+  try {
+    storedOptimizations = await db.productOptimization.findMany({
+      where: { shop },
+      include: {
+        revisions: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
       },
-    },
-  });
+    });
+  } catch (err) {
+    console.warn("[getShopifyProducts] Database fetch fallback:", err);
+  }
 
   const optimizationMap = new Map(
     storedOptimizations.map((item) => [item.productId, item])

@@ -11,6 +11,7 @@ build/
 *.sqlite-journal
 dev.sqlite
 dev.sqlite-journal
+!prisma/dev.sqlite
 .DS_Store
 *.log
 videos_temp/
