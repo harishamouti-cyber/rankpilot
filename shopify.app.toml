@@ -1,9 +1,9 @@
 # Shopify App Configuration for RankPilot
 # https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "rankpilot_client_id_2026"
+client_id = "82464865c45f23d73b21b486de6ace7a"
 name = "RankPilot"
-handle = "rankpilot"
+# handle = "rankpilot-1"
 application_url = "https://rankpilot-five-tan.vercel.app"
 embedded = true
 
