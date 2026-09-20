@@ -3,7 +3,7 @@ import type { MetaFunction } from "@remix-run/node";
 export const meta: MetaFunction = () => {
   return [
     { title: "Privacy Policy | RankPilot" },
-    { name: "description", content: "RankPilot GDPR and Privacy Policy." },
+    { name: "description", content: "RankPilot official GDPR, CCPA, and Data Privacy Policy for Shopify merchants." },
   ];
 };
 
@@ -15,48 +15,86 @@ export default function PrivacyPolicy() {
         <p style={{ color: "#6d7175", margin: 0, fontSize: "14px" }}>Last updated: September 2026</p>
       </header>
 
-      <section style={{ marginBottom: "32px" }}>
-        <h2 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "12px" }}>1. Overview & Zero Customer PII Commitment</h2>
+      <section style={{ marginBottom: "28px" }}>
+        <h2 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "12px" }}>1. Introduction & Core Privacy Commitment</h2>
         <p>
-          RankPilot is an AI Search and Generative Engine Optimization (GEO) platform engineered exclusively for Shopify merchants.
-          <strong> RankPilot does not collect, store, sell, or process any Personally Identifiable Information (PII) of your end customers.</strong>
+          RankPilot ("we", "our", or "the App") provides an AI Search and Generative Engine Optimization (GEO) platform for Shopify merchants. We are deeply committed to safeguarding merchant privacy and transparency.
         </p>
+        <div style={{ backgroundColor: "#f1f8f5", borderLeft: "4px solid #008060", padding: "16px 20px", borderRadius: "4px", margin: "16px 0" }}>
+          <strong>Zero Customer PII Policy:</strong> RankPilot does not collect, track, store, sell, or process any Personally Identifiable Information (PII) of your end consumers (such as shopper names, physical addresses, credit card numbers, phone numbers, or emails). RankPilot operates solely upon public and merchant-approved product catalog metadata.
+        </div>
       </section>
 
-      <section style={{ marginBottom: "32px" }}>
-        <h2 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "12px" }}>2. Data We Process</h2>
-        <p>RankPilot operates strictly upon public and merchant-owned product catalog metadata:</p>
+      <section style={{ marginBottom: "28px" }}>
+        <h2 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "12px" }}>2. Information We Collect and Process</h2>
+        <p>To deliver AI SEO and schema markup services, RankPilot accesses the following store-level data via authorized Shopify Admin GraphQL APIs:</p>
         <ul>
-          <li>Product titles, descriptions, categories, and tags</li>
-          <li>Product inventory availability and pricing</li>
-          <li>Structured Schema.org JSON-LD and custom metafields</li>
-          <li>Search engine indexing logs (IndexNow submission records)</li>
+          <li><strong>Product Catalog Metadata:</strong> Product titles, descriptions, handles, product types, vendor names, tags, prices, and stock availability levels.</li>
+          <li><strong>Custom Metafields:</strong> Custom structured schemas, specification matrices, and conversational buyer FAQ JSON arrays created by or managed within RankPilot.</li>
+          <li><strong>Historical Snapshots:</strong> Prior product titles, descriptions, and metafields strictly used to power our 1-Click Rollback Snapshot feature.</li>
+          <li><strong>Indexing Logs:</strong> URLs, timestamps, and HTTP response codes of real-time search engine submission pings sent to IndexNow (Bing, Yandex, etc.).</li>
+          <li><strong>Store Information:</strong> Myshopify store domain, public store URL, and active subscription plan tier for billing verification.</li>
         </ul>
       </section>
 
-      <section style={{ marginBottom: "32px" }}>
-        <h2 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "12px" }}>3. GDPR & CCPA Compliance</h2>
-        <p>
-          RankPilot is fully integrated with Shopify's mandatory GDPR compliance webhooks:
-        </p>
+      <section style={{ marginBottom: "28px" }}>
+        <h2 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "12px" }}>3. How We Use Your Data</h2>
+        <p>The collected catalog data is strictly utilized for the following operational purposes:</p>
         <ul>
-          <li><strong>customers/data_request:</strong> Acknowledged immediately (no customer PII is retained).</li>
-          <li><strong>customers/redact:</strong> Acknowledged immediately.</li>
-          <li><strong>shop/redact:</strong> 48 hours following app uninstallation, all store-related configuration, optimization history, and cached snapshots are permanently purged from our database.</li>
+          <li>Generating AI-driven SEO titles, meta descriptions, high-density technical comparison tables, and conversational buyer FAQs.</li>
+          <li>Constructing certified Schema.org JSON-LD structured data for Google AI Overviews and AI search engine grounding.</li>
+          <li>Pinging search engine APIs (IndexNow) to accelerate crawl and re-indexing of catalog updates and restocks.</li>
+          <li>Providing point-in-time version history snapshots so merchants can easily roll back content edits.</li>
+          <li>Monitoring catalog health, inventory transitions, and schema drift prevention via 24/7 Autopilot.</li>
         </ul>
       </section>
 
-      <section style={{ marginBottom: "32px" }}>
-        <h2 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "12px" }}>4. Data Security</h2>
+      <section style={{ marginBottom: "28px" }}>
+        <h2 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "12px" }}>4. Third-Party Sub-Processors</h2>
+        <p>RankPilot partners with industry-leading, enterprise-grade cloud infrastructure providers to provide our service:</p>
+        <ul>
+          <li><strong>Vercel Inc. (Hosting & Edge Functions):</strong> Cloud infrastructure used to run our server application with TLS 1.3 encryption.</li>
+          <li><strong>Google Cloud Platform (Gemini AI API):</strong> Used solely to generate semantic product optimization recommendations. Prompt data submitted is never used to train public foundational AI models.</li>
+          <li><strong>IndexNow (Microsoft Bing & Participating Search Engines):</strong> Receives product URLs to notify crawlers of newly published or restocked items.</li>
+          <li><strong>Shopify Inc.:</strong> Powers app authentication, OAuth token exchange, and subscription billing.</li>
+        </ul>
+      </section>
+
+      <section style={{ marginBottom: "28px" }}>
+        <h2 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "12px" }}>5. Mandatory Shopify GDPR Compliance & Webhook Handling</h2>
+        <p>RankPilot strictly adheres to the European Union General Data Protection Regulation (GDPR) and the California Consumer Privacy Act (CCPA):</p>
+        <ul>
+          <li><strong>Customer Data Request (<code>customers/data_request</code>):</strong> Acknowledged immediately. Because RankPilot stores zero end-customer PII, we certify that no customer data exists within our systems.</li>
+          <li><strong>Customer Deletion (<code>customers/redact</code>):</strong> Acknowledged immediately. No customer records exist to redact.</li>
+          <li><strong>Shop Deletion (<code>shop/redact</code>):</strong> Dispatched by Shopify 48 hours following app uninstallation. Upon receipt, RankPilot completely and permanently purges all store configurations, optimization history, revision snapshots, indexing logs, and sessions from our database.</li>
+        </ul>
+      </section>
+
+      <section style={{ marginBottom: "28px" }}>
+        <h2 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "12px" }}>6. Storefront Cookies & Speed Impact</h2>
         <p>
-          All communications between your store and RankPilot are encrypted using industry-standard TLS 1.3 encryption. API keys and secrets are securely hashed and stored in compliant database storage.
+          RankPilot does not place any tracking cookies, behavioral beacons, or analytical fingerprinting scripts on your customer storefront. Our Theme App Extension blocks are rendered using 100% server-side liquid templates with native HTML5 &lt;details&gt;/&lt;summary&gt; tags, ensuring zero script execution penalty and zero user tracking.
         </p>
       </section>
 
-      <section style={{ marginBottom: "32px" }}>
-        <h2 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "12px" }}>5. Contact Us</h2>
+      <section style={{ marginBottom: "28px" }}>
+        <h2 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "12px" }}>7. Data Security Measures</h2>
         <p>
-          If you have any questions regarding this Privacy Policy, contact our privacy team at <a href="mailto:privacy@rankpilot.app" style={{ color: "#008060" }}>privacy@rankpilot.app</a>.
+          All data in transit is encrypted using modern TLS 1.3 cryptography. All webhook communications from Shopify are cryptographically validated against your store's HMAC-SHA256 signature to prevent spoofing or unauthorized payload injection.
+        </p>
+      </section>
+
+      <section style={{ marginBottom: "28px" }}>
+        <h2 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "12px" }}>8. Merchant Rights & Contact Information</h2>
+        <p>
+          Merchants may request access to, modification of, or complete deletion of their stored catalog snapshots at any time by contacting our privacy officer:
+        </p>
+        <p>
+          <strong>Privacy Officer:</strong> RankPilot Data Protection Team
+          <br />
+          <strong>Email:</strong> <a href="mailto:privacy@rankpilot.app" style={{ color: "#008060" }}>privacy@rankpilot.app</a>
+          <br />
+          <strong>General Support:</strong> <a href="mailto:support@rankpilot.app" style={{ color: "#008060" }}>support@rankpilot.app</a>
         </p>
       </section>
     </div>

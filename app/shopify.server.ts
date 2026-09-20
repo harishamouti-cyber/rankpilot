@@ -93,7 +93,7 @@ export const shopify = shopifyApp({
   apiSecretKey: process.env.SHOPIFY_API_SECRET || "rankpilot_dev_secret",
   apiVersion: ApiVersion.October24,
   scopes: process.env.SCOPES?.split(",") || ["write_products", "read_products"],
-  appUrl: process.env.SHOPIFY_APP_URL || "https://rankpilot.local",
+  appUrl: process.env.SHOPIFY_APP_URL || "https://rankpilot-five-tan.vercel.app",
   authPathPrefix: "/auth",
   sessionStorage: new PrismaSessionStorageAdapter(),
   distribution: AppDistribution.AppStore,
