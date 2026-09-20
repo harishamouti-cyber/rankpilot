@@ -187,9 +187,10 @@ Configure 3 recurring monthly subscription tiers:
 
 All required media assets have been generated, recorded, and placed directly in your `public/` directory:
 
-1. **App Icon (Square 1200x1200px):**
-   - File location: `public/rankpilot_app_icon.jpg`
-   - Upload this in the **App icon** field.
+1. **App Icon (Square 1200x1200px PNG - Cleaned, No Watermark):**
+   - File location: `public/app-icon.png` (or `public/rankpilot_app_icon.jpg`)
+   - Dimensions: Exactly 1200x1200px, 100% clean background with zero watermark artifacts.
+   - Upload this in the **App icon** field in the Shopify Partner Dashboard.
 
 2. **Screenshots (Desktop 1600x900px):**
    Upload these 6 screenshots from `public/screenshots/`:

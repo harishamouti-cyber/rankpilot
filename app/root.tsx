@@ -11,7 +11,8 @@ import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import enTranslations from "@shopify/polaris/locales/en.json";
 
 export const links: LinksFunction = () => [
-  { rel: "icon", type: "image/jpeg", href: "/rankpilot_app_icon.jpg" },
+  { rel: "icon", type: "image/png", href: "/app-icon.png" },
+  { rel: "alternate icon", type: "image/jpeg", href: "/rankpilot_app_icon.jpg" },
   { rel: "stylesheet", href: polarisStyles },
   { rel: "preconnect", href: "https://cdn.shopify.com" },
   {
