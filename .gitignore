@@ -15,3 +15,4 @@ dev.sqlite-journal
 .DS_Store
 *.log
 videos_temp/
+scratch/
