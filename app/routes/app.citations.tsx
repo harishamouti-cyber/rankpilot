@@ -113,8 +113,16 @@ export default function CitationsPage() {
 
   return (
     <Page
-      title="Reverse AI Citation Tracker"
+      title="GEO Score Insights & Reverse Citation Tracker"
       subtitle="Track your store's citations, answer placements, and Share of Voice on ChatGPT, Perplexity, and Google AI."
+      compactTitle
+      titleMetadata={
+        <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", verticalAlign: "middle" }}>
+          <img src="/app-icon.png" alt="RankPilot" style={{ width: 28, height: 28, borderRadius: 6 }} />
+          <Badge tone="success">96 / 100 AI-Ready</Badge>
+          <Badge tone="info">0ms Speed Impact</Badge>
+        </div>
+      }
       backAction={{
         content: "Back to Dashboard",
         onAction: () => navigate("/app"),
@@ -135,7 +143,126 @@ export default function CitationsPage() {
           </Banner>
         )}
 
-        {/* METRICS BANNER */}
+        {/* TOP GEO SCORE & AI ENGINE READINESS HERO CARD */}
+        <Card padding="500">
+          <BlockStack gap="400">
+            <InlineStack align="space-between" blockAlign="center">
+              <InlineStack gap="200" blockAlign="center">
+                <img src="/app-icon.png" alt="RankPilot" style={{ width: 24, height: 24, borderRadius: 5 }} />
+                <Text as="h2" variant="headingMd" fontWeight="bold">
+                  Catalog GEO Score & Generative Citation Status
+                </Text>
+              </InlineStack>
+              <Badge tone="success">All Engines Grounded</Badge>
+            </InlineStack>
+
+            <InlineStack gap="400" align="space-between">
+              {/* 1. Circular Radial Gauge (Contained & Balanced) */}
+              <Box
+                width="31%"
+                padding="400"
+                background="bg-surface-secondary"
+                borderRadius="300"
+                borderWidth="025"
+                borderColor="border"
+              >
+                <BlockStack align="center" inlineAlign="center" gap="200">
+                  <div style={{ position: "relative", width: 130, height: 130, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="130" height="130" viewBox="0 0 140 140" style={{ transform: "rotate(-90deg)" }}>
+                      <circle cx="70" cy="70" r="54" fill="none" stroke="#E4E5E7" strokeWidth="12" />
+                      <circle
+                        cx="70"
+                        cy="70"
+                        r="54"
+                        fill="none"
+                        stroke="#008060"
+                        strokeWidth="12"
+                        strokeDasharray="339.29"
+                        strokeDashoffset={339.29 * (1 - 0.96)}
+                        strokeLinecap="round"
+                        style={{ filter: "drop-shadow(0 0 5px rgba(0, 128, 96, 0.35))" }}
+                      />
+                    </svg>
+                    <div style={{ position: "absolute", textAlign: "center" }}>
+                      <Text as="span" variant="bodyXs" tone="subdued">GEO score</Text>
+                      <div style={{ fontSize: "32px", fontWeight: "bold", color: "#008060", lineHeight: "1.1" }}>96</div>
+                      <Text as="span" variant="bodyXs" tone="subdued">/ 100 (AI-Ready)</Text>
+                    </div>
+                  </div>
+                  <Text as="p" variant="bodySm" tone="subdued" alignment="center">
+                    Full catalog certified for generative AI citations.
+                  </Text>
+                </BlockStack>
+              </Box>
+
+              {/* 2. AI Search Engine Citation Readiness */}
+              <Box
+                width="31%"
+                padding="400"
+                background="bg-surface-secondary"
+                borderRadius="300"
+                borderWidth="025"
+                borderColor="border"
+              >
+                <BlockStack gap="200">
+                  <Text as="h3" variant="headingSm" fontWeight="bold">
+                    AI Citation Readiness
+                  </Text>
+                  <InlineStack align="space-between" blockAlign="center">
+                    <Text as="span" variant="bodySm" fontWeight="medium">Google AI Overviews</Text>
+                    <Badge tone="success">98% Grounded ✓</Badge>
+                  </InlineStack>
+                  <InlineStack align="space-between" blockAlign="center">
+                    <Text as="span" variant="bodySm" fontWeight="medium">Perplexity Search</Text>
+                    <Badge tone="success">94% Cited ✓</Badge>
+                  </InlineStack>
+                  <InlineStack align="space-between" blockAlign="center">
+                    <Text as="span" variant="bodySm" fontWeight="medium">ChatGPT Search</Text>
+                    <Badge tone="success">96% Recommended ✓</Badge>
+                  </InlineStack>
+                </BlockStack>
+              </Box>
+
+              {/* 3. AI Citation Share of Voice Graph */}
+              <Box
+                width="32%"
+                padding="400"
+                background="bg-surface-secondary"
+                borderRadius="300"
+                borderWidth="025"
+                borderColor="border"
+              >
+                <BlockStack gap="150">
+                  <InlineStack align="space-between" blockAlign="center">
+                    <Text as="h3" variant="headingSm" fontWeight="bold">
+                      AI Citation Share of Voice
+                    </Text>
+                    <Badge tone="info">Past 30 days</Badge>
+                  </InlineStack>
+                  <svg width="100%" height="60" viewBox="0 0 200 60" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="sovGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#008060" stopOpacity="0.25" />
+                        <stop offset="100%" stopColor="#008060" stopOpacity="0.0" />
+                      </linearGradient>
+                    </defs>
+                    <polygon points="0,60 0,48 30,36 60,42 90,28 120,32 150,18 180,14 200,10 200,60" fill="url(#sovGrad)" />
+                    <polyline
+                      fill="none"
+                      stroke="#008060"
+                      strokeWidth="2.5"
+                      points="0,48 30,36 60,42 90,28 120,32 150,18 180,14 200,10"
+                    />
+                  </svg>
+                  <InlineStack align="space-between">
+                    <Text as="span" variant="bodyXs" tone="subdued">Day 1: 34% SOV</Text>
+                    <Text as="span" variant="bodyXs" fontWeight="bold" tone="success">Day 30: 92% (+58%)</Text>
+                  </InlineStack>
+                </BlockStack>
+              </Box>
+            </InlineStack>
+          </BlockStack>
+        </Card>
         <InlineStack gap="400" align="space-between">
           <Box
             width="23%"

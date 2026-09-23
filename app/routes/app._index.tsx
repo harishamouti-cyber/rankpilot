@@ -199,6 +199,28 @@ export default function AppDashboard() {
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
   const [isSetupGuideDismissed, setIsSetupGuideDismissed] = useState(false);
 
+  React.useEffect(() => {
+    if (typeof window !== "undefined" && window.location.search.includes("demoDiff=1") && initialProducts.length > 0) {
+      const prod = initialProducts[0];
+      setSelectedProduct(prod);
+      setCurrentOptimization({
+        seoTitle: "ErgoLight: Premium Height-Adjustable LED Desk Lamp with USB-C Charging - White",
+        seoDescription: "Engineered for optimal focus and productivity with touch dimmer, USB-C charging port, and full spectrum eye-protection LED illumination.",
+        aiScore: 96,
+        confidence: 0.98,
+        specMatrixHtml: "<table><thead><tr><th>Feature</th><th>Specification</th></tr></thead><tbody><tr><td>Lumen Output</td><td>3500 Lumens</td></tr><tr><td>Color Temperature</td><td>2700K - 6500K</td></tr><tr><td>Material</td><td>Aircraft-grade Aluminum</td></tr></tbody></table>",
+        schemaJson: { "@context": "https://schema.org", "@type": "Product", "name": prod.title },
+        faqList: [
+          { question: "What is the lumen output of the ErgoLight desk lamp?", answer: "The ErgoLight delivers up to 3500 lumens of flicker-free illumination across 5 color temperature presets." },
+          { question: "Does this lamp include high-speed USB-C charging?", answer: "Yes, it features an integrated 20W USB-C Power Delivery port capable of fast-charging smartphones and accessories." },
+          { question: "Is the lamp compatible with smart home power strips?", answer: "Yes, it retains its previous brightness and color setting when powered on via external switches." }
+        ],
+        reasoning: "Entity-grounded optimization matching Google AI Overview search queries."
+      });
+      setActiveModal("optimize");
+    }
+  }, [initialProducts]);
+
   const handleQueryBoosted = (productId: string, query: string, newTitle: string) => {
     setProducts((prev) =>
       prev.map((p) => {
@@ -937,12 +959,13 @@ export default function AppDashboard() {
           style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: "8px",
+            gap: "10px",
             flexWrap: "wrap",
             verticalAlign: "middle",
             maxWidth: "100%",
           }}
         >
+          <img src="/app-icon.png" alt="RankPilot" style={{ width: 28, height: 28, borderRadius: 6, verticalAlign: "middle" }} />
           <Badge tone="info">{`Plan: ${setting.plan}`}</Badge>
           <Badge tone="success">0ms Storefront Impact</Badge>
         </div>
