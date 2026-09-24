@@ -207,7 +207,14 @@ export default function AppDashboard() {
         seoTitle: "ErgoLight: Premium Height-Adjustable LED Desk Lamp with USB-C Charging - White",
         seoDescription: "Engineered for optimal focus and productivity with touch dimmer, USB-C charging port, and full spectrum eye-protection LED illumination.",
         aiScore: 96,
-        confidence: 0.98,
+        scoreBreakdown: {
+          titleOptimization: 98,
+          metaDescriptionQuality: 95,
+          specMatrixCompleteness: 96,
+          schemaRichness: 97,
+          conversationalFaqDepth: 94,
+        },
+        summarySnippet: "Entity-grounded optimization matching Google AI Overview search queries.",
         specMatrixHtml: "<table><thead><tr><th>Feature</th><th>Specification</th></tr></thead><tbody><tr><td>Lumen Output</td><td>3500 Lumens</td></tr><tr><td>Color Temperature</td><td>2700K - 6500K</td></tr><tr><td>Material</td><td>Aircraft-grade Aluminum</td></tr></tbody></table>",
         schemaJson: { "@context": "https://schema.org", "@type": "Product", "name": prod.title },
         faqList: [
@@ -215,7 +222,6 @@ export default function AppDashboard() {
           { question: "Does this lamp include high-speed USB-C charging?", answer: "Yes, it features an integrated 20W USB-C Power Delivery port capable of fast-charging smartphones and accessories." },
           { question: "Is the lamp compatible with smart home power strips?", answer: "Yes, it retains its previous brightness and color setting when powered on via external switches." }
         ],
-        reasoning: "Entity-grounded optimization matching Google AI Overview search queries."
       });
       setActiveModal("optimize");
     }
