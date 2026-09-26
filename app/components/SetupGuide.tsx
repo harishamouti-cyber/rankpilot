@@ -10,6 +10,7 @@ import {
   Box,
   Divider,
   Collapsible,
+  Icon,
 } from "@shopify/polaris";
 import {
   CheckCircleIcon,
@@ -130,7 +131,7 @@ export function SetupGuide({
               {/* STEP 1: CATALOG SYNCED */}
               <Box
                 width="31%"
-                padding="400"
+                padding="300"
                 background="bg-surface-secondary"
                 borderRadius="200"
                 borderWidth="025"
@@ -139,28 +140,28 @@ export function SetupGuide({
                 <BlockStack gap="200">
                   <InlineStack align="space-between" blockAlign="center">
                     <Text as="h3" variant="headingSm" fontWeight="bold">
-                      Step 1: Catalog Synced
+                      1. Catalog Synced
                     </Text>
                     <Badge tone="success" size="small">Completed</Badge>
                   </InlineStack>
 
-                  <InlineStack gap="150" blockAlign="start">
-                    <CheckCircleIcon width={18} height={18} fill="#008060" />
-                    <Text as="p" variant="bodySm">
-                      {totalCount} products imported and indexed into RankPilot's GEO monitoring graph.
-                    </Text>
-                  </InlineStack>
-
-                  <Text as="p" variant="bodyXs" tone="subdued">
-                    Zero-overhead GraphQL connection active.
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {totalCount} products imported and indexed into RankPilot's GEO monitoring graph.
                   </Text>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <Icon source={CheckCircleIcon} tone="success" />
+                    <Text as="p" variant="bodySm" tone="success" fontWeight="medium">
+                      Zero-overhead GraphQL active
+                    </Text>
+                  </div>
                 </BlockStack>
               </Box>
 
               {/* STEP 2: OPTIMIZE FIRST PRODUCT */}
               <Box
                 width="31%"
-                padding="400"
+                padding="300"
                 background={step2Complete ? "bg-surface-secondary" : "bg-surface-active"}
                 borderRadius="200"
                 borderWidth="050"
@@ -169,7 +170,7 @@ export function SetupGuide({
                 <BlockStack gap="200">
                   <InlineStack align="space-between" blockAlign="center">
                     <Text as="h3" variant="headingSm" fontWeight="bold">
-                      Step 2: Optimize First Product
+                      2. Product Optimized
                     </Text>
                     {step2Complete ? (
                       <Badge tone="success" size="small">Completed</Badge>
@@ -179,11 +180,7 @@ export function SetupGuide({
                   </InlineStack>
 
                   <Text as="p" variant="bodySm" tone="subdued">
-                    {step2Complete
-                      ? "First product successfully enriched with high-density spec matrix & schema."
-                      : firstUnoptimizedProduct
-                      ? `Enrich "${firstUnoptimizedProduct.title.slice(0, 26)}..." with search-intent titles & FAQs.`
-                      : "Enrich unranked products with search-intent titles, spec tables, and buyer FAQs."}
+                    First SKU enriched with structured spec matrix and buyer FAQs.
                   </Text>
 
                   {!step2Complete && firstUnoptimizedProduct ? (
@@ -197,12 +194,12 @@ export function SetupGuide({
                       Open Diff
                     </Button>
                   ) : (
-                    <InlineStack gap="150" blockAlign="center">
-                      <CheckCircleIcon width={18} height={18} fill="#008060" />
-                      <Text as="p" variant="bodySm" tone="success">
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <Icon source={CheckCircleIcon} tone="success" />
+                      <Text as="p" variant="bodySm" tone="success" fontWeight="medium">
                         First product live &amp; cited
                       </Text>
-                    </InlineStack>
+                    </div>
                   )}
                 </BlockStack>
               </Box>
@@ -210,7 +207,7 @@ export function SetupGuide({
               {/* STEP 3: ACTIVATE AUTOPILOT GUARD */}
               <Box
                 width="31%"
-                padding="400"
+                padding="300"
                 background="bg-surface-secondary"
                 borderRadius="200"
                 borderWidth="025"
@@ -219,7 +216,7 @@ export function SetupGuide({
                 <BlockStack gap="200">
                   <InlineStack align="space-between" blockAlign="center">
                     <Text as="h3" variant="headingSm" fontWeight="bold">
-                      Step 3: Activate Autopilot Guard
+                      3. Autopilot Guard
                     </Text>
                     {step3Complete ? (
                       <Badge tone="success" size="small">Active</Badge>
@@ -228,12 +225,9 @@ export function SetupGuide({
                     )}
                   </InlineStack>
 
-                  <InlineStack gap="150" blockAlign="start">
-                    <ShieldCheckMarkIcon width={18} height={18} fill={step3Complete ? "#008060" : "#5c5f62"} />
-                    <Text as="p" variant="bodySm">
-                      24/7 background drift detection, inventory-aware schemas, and instant IndexNow pings.
-                    </Text>
-                  </InlineStack>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    24/7 catalog drift sentinel &amp; instant IndexNow engine active.
+                  </Text>
 
                   {!step3Complete ? (
                     <Button
@@ -245,12 +239,12 @@ export function SetupGuide({
                       Enable
                     </Button>
                   ) : (
-                    <InlineStack gap="150" blockAlign="center">
-                      <CheckCircleIcon width={18} height={18} fill="#008060" />
-                      <Text as="p" variant="bodySm" tone="success">
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <Icon source={CheckCircleIcon} tone="success" />
+                      <Text as="p" variant="bodySm" tone="success" fontWeight="medium">
                         24/7 Guard Active
                       </Text>
-                    </InlineStack>
+                    </div>
                   )}
                 </BlockStack>
               </Box>
