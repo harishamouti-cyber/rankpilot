@@ -15,10 +15,55 @@ async function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function smoothMoveTo(page, x, y, steps = 18) {
+  try {
+    await page.mouse.move(x, y, { steps });
+  } catch (e) {}
+  await sleep(80);
+}
+
+async function safeScrollBy(page, top) {
+  try {
+    await page.evaluate((y) => window.scrollBy({ top: y, behavior: "smooth" }), top);
+  } catch (e) {}
+}
+
+async function safeScrollModal(page, top) {
+  try {
+    await page.evaluate((y) => {
+      const modalBody = document.querySelector(".Polaris-Modal__Body");
+      if (modalBody) modalBody.scrollBy({ top: y, behavior: "smooth" });
+    }, top);
+  } catch (e) {}
+}
+
+async function safeScrollModalTo(page, top) {
+  try {
+    await page.evaluate((y) => {
+      const modalBody = document.querySelector(".Polaris-Modal__Body");
+      if (modalBody) modalBody.scrollTo({ top: y, behavior: "smooth" });
+    }, top);
+  } catch (e) {}
+}
+
+async function safeClick(locator) {
+  try {
+    await locator.scrollIntoViewIfNeeded({ timeout: 3000 });
+    await locator.hover({ timeout: 3000 });
+    await sleep(200);
+    await locator.click({ timeout: 3000 });
+    await sleep(300);
+  } catch (e) {
+    try {
+      await locator.click({ force: true, timeout: 2000 });
+    } catch (err) {}
+  }
+}
+
 async function recordDemo() {
   console.log("================================================================================");
   console.log("  RankPilot Professional App Review Screencast Recording");
-  console.log("  (Zero /llms.txt code screen - 100% in-app Polaris UI & GEO Workflows)");
+  console.log("  (Fluid pacing, visible cursor, zero looping, 100% Polaris UI)");
   console.log("================================================================================");
 
   if (!fs.existsSync(RECORDINGS_DIR)) {
@@ -38,7 +83,7 @@ async function recordDemo() {
     }
   }
 
-  console.log(`[1/6] Launching Chromium from: ${CHROME_PATH}`);
+  console.log(`[1/5] Launching Chromium from: ${CHROME_PATH}`);
   const browser = await chromium.launch({
     executablePath: CHROME_PATH,
     headless: true,
@@ -60,200 +105,250 @@ async function recordDemo() {
 
   const page = await context.newPage();
 
+  // Inject pre-seeded onboarding state and smooth cursor tracker
+  await page.addInitScript(() => {
+    localStorage.setItem("rankpilot_onboarded", "true");
+    localStorage.setItem("rankpilot_onboarded_demo.myshopify.com", "true");
+    localStorage.setItem("rankpilot_setup_dismissed", "false");
+    localStorage.setItem("rankpilot_setup_dismissed_demo.myshopify.com", "false");
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const cursor = document.createElement("div");
+      cursor.id = "playwright-cursor";
+      cursor.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: rgba(0, 128, 96, 0.75);
+        border: 2px solid #ffffff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.35);
+        pointer-events: none;
+        z-index: 2147483647;
+        transform: translate(-50%, -50%);
+        transition: width 0.12s ease, height 0.12s ease, background-color 0.12s ease;
+      `;
+      document.body.appendChild(cursor);
+
+      window.addEventListener("mousemove", (e) => {
+        cursor.style.left = e.clientX + "px";
+        cursor.style.top = e.clientY + "px";
+      });
+
+      window.addEventListener("mousedown", () => {
+        cursor.style.width = "12px";
+        cursor.style.height = "12px";
+        cursor.style.backgroundColor = "rgba(0, 90, 65, 0.95)";
+      });
+
+      window.addEventListener("mouseup", () => {
+        cursor.style.width = "18px";
+        cursor.style.height = "18px";
+        cursor.style.backgroundColor = "rgba(0, 128, 96, 0.75)";
+      });
+    });
+  });
+
   try {
     // -------------------------------------------------------------------------
-    // SCENE 1: App Launch, Quick-Start Setup & AI Visibility Audit
+    // SCENE 1: App Launch & Main Catalog Dashboard (0:00 - 0:14)
     // -------------------------------------------------------------------------
     console.log("[Scene 1] Navigating to RankPilot inside Shopify Admin...");
     await page.goto(`${BASE_URL}/app?shop=demo.myshopify.com`, {
       waitUntil: "networkidle",
       timeout: 30000,
     });
-    await sleep(2500);
+    await sleep(2000);
 
-    // If welcome modal is open, trigger the automated scan
-    const scanBtn = page.locator("button:has-text('Run Automated AI Visibility Scan')").first();
-    if (await scanBtn.isVisible()) {
-      console.log("[Scene 1] Welcome modal open: Starting 3-second automated AI visibility scan...");
-      await sleep(1500);
-      await scanBtn.click();
-      console.log("[Scene 1] Scanning product catalog across Google AI, Perplexity, and ChatGPT...");
-      await sleep(3500);
-      console.log("[Scene 1] Audit complete. Exploring dashboard...");
-      const exploreBtn = page.locator("button:has-text('Explore Dashboard')").first();
-      if (await exploreBtn.isVisible()) {
-        await exploreBtn.click();
-        await sleep(1500);
+    // Initial smooth cursor movement over top bar
+    console.log("[Scene 1] Demonstrating header status & 0ms storefront speed badge...");
+    await smoothMoveTo(page, 320, 36, 15);
+    await sleep(600);
+    await smoothMoveTo(page, 410, 36, 12);
+    await sleep(800);
+
+    // Hover over Quick-Start Setup cards
+    console.log("[Scene 1] Highlighting 3 Quick-Start Setup cards...");
+    await smoothMoveTo(page, 350, 230, 18);
+    await sleep(900);
+    await smoothMoveTo(page, 620, 230, 15);
+    await sleep(900);
+    await smoothMoveTo(page, 900, 230, 15);
+    await sleep(900);
+
+    // Hover over KPI metrics
+    console.log("[Scene 1] Highlighting AI Catalog Readiness (100%) and IndexNow Pings...");
+    await smoothMoveTo(page, 430, 460, 15);
+    await sleep(700);
+    await smoothMoveTo(page, 560, 460, 12);
+    await sleep(700);
+
+    // Smoothly scroll down so the product catalog table is centered
+    console.log("[Scene 1] Scrolling down to product catalog table...");
+    await safeScrollBy(page, 320);
+    await sleep(1500);
+
+    // -------------------------------------------------------------------------
+    // SCENE 2: Core Feature — 1-Click AI Proof & Diff Modal (0:14 - 0:42)
+    // -------------------------------------------------------------------------
+    console.log("[Scene 2] Opening Side-by-Side AI Diff Modal for first product...");
+    const viewDiffBtn = page.locator("button:has-text('View Diff')").first();
+    await safeClick(viewDiffBtn);
+    await sleep(1000);
+
+    // Wait for the modal dialog to be visible
+    await page.waitForSelector("[role='dialog']", { state: "visible", timeout: 8000 });
+    console.log("[Scene 2] Modal opened successfully!");
+    await sleep(1500);
+
+    // Hover over Projected GEO Score Lift badge
+    await smoothMoveTo(page, 440, 115, 15);
+    await sleep(1200);
+
+    // Smoothly inspect Side-by-Side comparison cards
+    console.log("[Scene 2] Inspecting Current Storefront Gaps vs RankPilot AI Supercharged...");
+    await smoothMoveTo(page, 370, 360, 15);
+    await sleep(1000);
+    await smoothMoveTo(page, 620, 360, 15);
+    await sleep(1000);
+
+    // Smooth scroll inside modal to reveal Spec Matrix and Buyer FAQs
+    console.log("[Scene 2] Scrolling inside modal: Showing Formatted Spec Matrix & Buyer FAQs...");
+    await safeScrollModal(page, 320);
+    await sleep(1800);
+
+    // Move cursor over Spec Matrix table
+    await smoothMoveTo(page, 620, 420, 14);
+    await sleep(1200);
+
+    // Demonstrate Live AI Engine Simulation tab
+    console.log("[Scene 2] Switching to Live AI Engine Simulation tab...");
+    const liveSimTab = page.locator("button:has-text('Live AI Engine Simulation')").first();
+    if (await liveSimTab.isVisible()) {
+      await safeClick(liveSimTab);
+      await sleep(1800);
+
+      // Hover over Perplexity & ChatGPT simulation cards
+      await smoothMoveTo(page, 500, 350, 14);
+      await sleep(1200);
+
+      // Switch back to Side-by-Side Comparison
+      const sideBySideTab = page.locator("button:has-text('Side-by-Side Comparison')").first();
+      await safeClick(sideBySideTab);
+      await sleep(1200);
+    }
+
+    // Scroll to the bottom of the modal to show action buttons
+    console.log("[Scene 2] Scrolling to Apply action...");
+    await safeScrollModalTo(page, 9999);
+    await sleep(1200);
+
+    // Click Apply & Push to Store
+    console.log("[Scene 2] Applying optimization and pushing to storefront via GraphQL metafields...");
+    const applyBtn = page.locator("button:has-text('Apply & Push to Store')").first();
+    if (await applyBtn.isVisible()) {
+      await safeClick(applyBtn);
+      await sleep(2200);
+    } else {
+      // Close modal cleanly if already applied
+      const closeBtn = page.locator("button[aria-label='Close']").first();
+      if (await closeBtn.isVisible()) {
+        await safeClick(closeBtn);
+        await sleep(1200);
       }
     }
 
-    // Wait for any modal backdrop to clear
-    await page.waitForSelector(".Polaris-Modal-Dialog__Container", { state: "detached", timeout: 4000 }).catch(() => {});
-    await sleep(2000);
+    await page.waitForSelector("[role='dialog']", { state: "detached", timeout: 5000 }).catch(() => {});
+    await sleep(1000);
 
     // -------------------------------------------------------------------------
-    // SCENE 2: Catalog Dashboard, Setup Cards & Product Filtering
+    // SCENE 3: GEO Score Insights & Reverse Citation Tracker (0:42 - 0:58)
     // -------------------------------------------------------------------------
-    console.log("[Scene 2] Demonstrating Quick-Start Setup, Autopilot Status & Catalog...");
-    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "smooth" }));
-    await sleep(2500);
-
-    // Demonstrate search filtering
-    console.log("[Scene 2] Filtering catalog by search query 'backpack'...");
-    const searchInput = page.locator("input[placeholder*='Search products']").first();
-    if (await searchInput.isVisible()) {
-      await searchInput.click();
-      await searchInput.type("backpack", { delay: 100 });
-      await sleep(2000);
-      await searchInput.fill("");
-      await sleep(1500);
-    }
-
-    // Switch tabs
-    console.log("[Scene 2] Switching tabs: Needs Optimization...");
-    const needsOptTab = page.locator("#needs-optimization, button:has-text('Needs Optimization')").first();
-    if (await needsOptTab.isVisible()) {
-      await needsOptTab.click();
-      await sleep(1800);
-    }
-
-    console.log("[Scene 2] Switching tabs: AI & Google Ready...");
-    const readyTab = page.locator("#ai-ready, button:has-text('AI & Google Ready')").first();
-    if (await readyTab.isVisible()) {
-      await readyTab.click();
-      await sleep(1800);
-    }
-
-    console.log("[Scene 2] Switching back to All products...");
-    const allTab = page.locator("#all, button:has-text('All')").first();
-    if (await allTab.isVisible()) {
-      await allTab.click();
-      await sleep(1800);
-    }
-
-    // -------------------------------------------------------------------------
-    // SCENE 3: Deep Dive AI Proof & Diff Modal (Side-by-Side Comparison)
-    // -------------------------------------------------------------------------
-    console.log("[Scene 3] Opening Side-by-Side AI Diff Modal...");
-    const viewDiffBtn = page.locator("button:has-text('View Diff')").first();
-    await viewDiffBtn.click();
-    await sleep(2500);
-
-    await page.waitForSelector(".Polaris-Modal-Dialog__Container", { state: "visible", timeout: 6000 }).catch(() => {});
-    await sleep(2000);
-
-    console.log("[Scene 3] Inspecting Projected GEO Score Lift & Spec Matrix...");
-    // Smooth scroll inside modal to show specs and FAQs
-    await page.evaluate(() => {
-      const modalBody = document.querySelector(".Polaris-Modal__Body");
-      if (modalBody) modalBody.scrollBy({ top: 220, behavior: "smooth" });
-    });
-    await sleep(2500);
-
-    // Switch Simulation Engine tabs
-    console.log("[Scene 3] Demonstrating Live AI Engine Simulation (ChatGPT Search)...");
-    const chatgptTab = page.locator("button:has-text('ChatGPT Search')").first();
-    if (await chatgptTab.isVisible()) {
-      await chatgptTab.click();
-      await sleep(2000);
-    }
-
-    console.log("[Scene 3] Demonstrating Live AI Engine Simulation (Perplexity)...");
-    const perplexityTab = page.locator("button:has-text('Perplexity Pro')").first();
-    if (await perplexityTab.isVisible()) {
-      await perplexityTab.click();
-      await sleep(2000);
-    }
-
-    // Switch back to side-by-side comparison
-    const sideBySideBtn = page.locator("button:has-text('Side-by-Side Comparison')").first();
-    if (await sideBySideBtn.isVisible()) {
-      await sideBySideBtn.click();
-      await sleep(1500);
-    }
-
-    // Scroll down to show action buttons
-    await page.evaluate(() => {
-      const modalBody = document.querySelector(".Polaris-Modal__Body");
-      if (modalBody) modalBody.scrollTo({ top: modalBody.scrollHeight, behavior: "smooth" });
-    });
-    await sleep(2000);
-
-    // Click Apply & Push to Store
-    console.log("[Scene 3] Applying optimization and pushing to storefront via GraphQL metafields...");
-    const applyBtn = page.locator("button:has-text('Apply & Push to Store')").first();
-    if (await applyBtn.isVisible()) {
-      await applyBtn.click();
-      await sleep(3000);
-    }
-
-    // -------------------------------------------------------------------------
-    // SCENE 4 (REPLACES /llms.txt!): GEO Score Insights & Reverse Citation Tracker
-    // -------------------------------------------------------------------------
-    console.log("[Scene 4] Navigating to GEO Score Insights & Citation Tracker (/app/citations)...");
+    console.log("[Scene 3] Navigating to GEO Score Insights & Citation Tracker (/app/citations)...");
     await page.goto(`${BASE_URL}/app/citations?shop=demo.myshopify.com`, {
       waitUntil: "networkidle",
       timeout: 30000,
     });
-    await sleep(3000);
+    await sleep(2000);
 
-    console.log("[Scene 4] Highlighting circular GEO Score 96 gauge, AI Citation Readiness & SOV chart...");
-    await sleep(2500);
+    // Hover over circular GEO Score 96 gauge & AI Citation Readiness
+    console.log("[Scene 3] Highlighting circular GEO Score 96 gauge & AI Citation Readiness...");
+    await smoothMoveTo(page, 335, 240, 16);
+    await sleep(1200);
+    await smoothMoveTo(page, 510, 240, 14);
+    await sleep(1200);
 
-    console.log("[Scene 4] Scrolling through live generative search queries & citations breakdown...");
-    await page.evaluate(() => window.scrollBy({ top: 380, behavior: "smooth" }));
-    await sleep(3000);
-
-    // Trigger Live AI Engine Audit
+    // Click Run Live AI Engine Audit button
     const auditBtn = page.locator("button:has-text('Run Live AI Engine Audit')").first();
     if (await auditBtn.isVisible()) {
-      console.log("[Scene 4] Triggering Live AI Engine Audit...");
-      await auditBtn.click();
-      await sleep(3500);
+      console.log("[Scene 3] Running Live AI Engine Audit...");
+      await safeClick(auditBtn);
+      await sleep(2200);
     }
 
+    // Scroll down to Citations Breakdown table
+    console.log("[Scene 3] Scrolling through live generative search queries & citations breakdown...");
+    await safeScrollBy(page, 380);
+    await sleep(1500);
+
+    // Hover over citation rows (ChatGPT Search & Perplexity)
+    await smoothMoveTo(page, 450, 480, 15);
+    await sleep(1000);
+    await smoothMoveTo(page, 450, 560, 12);
+    await sleep(1200);
+
     // -------------------------------------------------------------------------
-    // SCENE 5: System Health, Metafields & Webhook Sentinel (/app/health)
+    // SCENE 4: System Health, Metafields & Webhooks (/app/health) (0:58 - 1:12)
     // -------------------------------------------------------------------------
-    console.log("[Scene 5] Navigating to System Health & Diagnostics (/app/health)...");
+    console.log("[Scene 4] Navigating to System Health & Diagnostics (/app/health)...");
     await page.goto(`${BASE_URL}/app/health?shop=demo.myshopify.com`, {
       waitUntil: "networkidle",
       timeout: 30000,
     });
-    await sleep(3000);
+    await sleep(2000);
 
-    console.log("[Scene 5] Verifying 4/4 Pinned Metafields & 6/6 Active Webhook Delivery Heartbeats...");
-    await page.evaluate(() => window.scrollBy({ top: 250, behavior: "smooth" }));
-    await sleep(2500);
+    // Verify 4/4 Pinned Metafields & 6/6 Active Webhooks
+    console.log("[Scene 4] Inspecting 4/4 Pinned Metafields & Webhook Deliveries...");
+    await smoothMoveTo(page, 420, 260, 15);
+    await sleep(1000);
+
+    // Smooth scroll down to self-heal button
+    await safeScrollBy(page, 260);
+    await sleep(1200);
 
     const selfHealBtn = page.locator("button:has-text('Re-sync Metafield Definitions & Self-Heal')").first();
     if (await selfHealBtn.isVisible()) {
-      console.log("[Scene 5] Executing self-heal synchronization...");
-      await selfHealBtn.click();
-      await sleep(3000);
+      console.log("[Scene 4] Triggering self-heal sync...");
+      await safeClick(selfHealBtn);
+      await sleep(2500);
     }
 
     // -------------------------------------------------------------------------
-    // SCENE 6: Autopilot Settings & Instant IndexNow Pushes (/app/settings)
+    // SCENE 5: Settings & 24/7 Autopilot Guard (/app/settings) (1:12 - 1:24)
     // -------------------------------------------------------------------------
-    console.log("[Scene 6] Navigating to Autopilot & IndexNow Settings (/app/settings)...");
+    console.log("[Scene 5] Navigating to Autopilot Settings (/app/settings)...");
     await page.goto(`${BASE_URL}/app/settings?shop=demo.myshopify.com`, {
       waitUntil: "networkidle",
       timeout: 30000,
     });
-    await sleep(2500);
+    await sleep(2000);
 
-    console.log("[Scene 6] Showing 24/7 Autopilot Catalog Scanner & Drift Sentinel toggles...");
-    await page.evaluate(() => window.scrollBy({ top: 300, behavior: "smooth" }));
-    await sleep(2500);
+    // Show Autopilot Scanner & IndexNow options
+    console.log("[Scene 5] Demonstrating Autopilot Scanner & IndexNow Discovery...");
+    await smoothMoveTo(page, 450, 300, 15);
+    await sleep(1000);
+    await safeScrollBy(page, 280);
+    await sleep(1500);
 
-    // Return to main dashboard for clean finish
-    console.log("[Scene 6] Returning to main catalog dashboard for clean finale...");
+    // Return to main dashboard for a clean finale
+    console.log("[Scene 5] Returning to Main Dashboard for clean finale...");
     await page.goto(`${BASE_URL}/app?shop=demo.myshopify.com`, {
       waitUntil: "networkidle",
       timeout: 30000,
     });
-    await sleep(2500);
+    await sleep(3000);
 
     console.log("================================================================================");
     console.log("  Screencast recording completed successfully!");
@@ -288,10 +383,10 @@ async function recordDemo() {
   console.log(`[Video Output] Saved raw WebM video to: ${targetWebmPath}`);
 
   if (fs.existsSync(FFMPEG_PATH)) {
-    console.log(`[FFmpeg] Converting ${sourceVideoPath} to 1080p MP4: ${targetMp4Path}...`);
+    console.log(`[FFmpeg] Converting ${sourceVideoPath} to 1080p MP4 with faststart: ${targetMp4Path}...`);
     try {
       execSync(
-        `"${FFMPEG_PATH}" -y -i "${sourceVideoPath}" -c:v libx264 -pix_fmt yuv420p -r 30 "${targetMp4Path}"`,
+        `"${FFMPEG_PATH}" -y -ss 00:00:01.0 -i "${sourceVideoPath}" -c:v libx264 -pix_fmt yuv420p -r 30 -movflags +faststart "${targetMp4Path}"`,
         { stdio: "inherit" }
       );
       console.log(`[Video Output] Successfully generated 1080p MP4: ${targetMp4Path}`);
