@@ -156,7 +156,7 @@ Configure 3 recurring monthly subscription tiers:
 
 #### Plan 2: Pro (Recommended)
 - **Plan Name:** `Pro`
-- **Price:** `$49.00 USD / month`
+- **Price:** `$29.00 USD / month`
 - **Billing Interval:** `Every 30 days`
 - **Free Trial:** `7 days`
 - **Included Features:**

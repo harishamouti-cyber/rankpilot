@@ -34,7 +34,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
   PRO: {
     id: "PRO",
     name: "Pro",
-    price: 49,
+    price: 29,
     interval: "EVERY_30_DAYS",
     currency: "USD",
     productLimit: 2000,
