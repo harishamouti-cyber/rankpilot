@@ -47,7 +47,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         autoPingIndexNow: true,
         autopilotEnabled: true,
         indexNowKey: "rankpilot-demo-indexnow-key-2025",
-        plan: "SCALE",
+        plan: "PRO",
       },
     });
   }
@@ -62,7 +62,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       autoPingIndexNow: setting.autoPingIndexNow,
       autopilotEnabled: setting.autopilotEnabled,
       storeDomain: setting.storeDomain || "demo.myshopify.com",
-      plan: setting.plan || "SCALE",
+      plan: setting.plan || "PRO",
       weeklyDigestEmail: storeConfig?.weeklyDigestEmail || "merchant@store.com",
     },
   });

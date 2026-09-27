@@ -143,7 +143,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       strikingQueriesCount: strikingQueries.length,
     },
     setting: {
-      plan: setting?.plan || "SCALE",
+      plan: setting?.plan || "PRO",
       autopilotEnabled: setting?.autopilotEnabled ?? true,
       geminiApiKey: setting?.geminiApiKey || "",
       indexNowKey: setting?.indexNowKey || "rankpilot-demo-indexnow-key-2025",
@@ -606,16 +606,6 @@ export default function AppDashboard() {
     if (targets.length === 0) {
       setToastTone("info");
       setToastMessage("All matching products are already optimized.");
-      return;
-    }
-
-    // 1. Subscription plan limit check (Gating)
-    if (setting.plan === "STARTER" && targets.length > 250) {
-      setToastTone("critical");
-      setToastMessage(
-        `Plan Limit: Starter is limited to 250 SKUs (${targets.length} selected). Upgrade to Pro or Scale to proceed.`
-      );
-      navigate("/app/billing");
       return;
     }
 

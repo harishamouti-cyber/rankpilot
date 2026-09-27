@@ -8,6 +8,7 @@ import {
   PLANS,
   PlanId,
 } from "~/services/billing.server";
+import { authenticate, unauthenticated } from "~/shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -25,32 +26,44 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const body = await request.json();
     const {
       shop = "demo.myshopify.com",
-      planId,
+      planId = "PRO",
       action: billingAction = "create_subscription",
       returnUrl = `/app/billing?shop=${encodeURIComponent(shop)}`,
       subscriptionId,
     } = body;
 
+    let adminClient: any = null;
+    let effectiveShop = shop;
+
+    try {
+      const auth = await authenticate.admin(request);
+      adminClient = auth.admin;
+      if (auth.session?.shop) {
+        effectiveShop = auth.session.shop;
+      }
+    } catch {
+      try {
+        const unauth = await unauthenticated.admin(shop);
+        adminClient = unauth.admin;
+      } catch {}
+    }
+
     if (billingAction === "cancel") {
-      const result = await cancelAppSubscription({ shop });
+      const result = await cancelAppSubscription({ shop: effectiveShop, adminClient });
       return json({ success: true, result });
     }
 
     if (billingAction === "confirm") {
-      const result = await confirmShopPlan(shop, planId as PlanId, subscriptionId);
+      const result = await confirmShopPlan(effectiveShop, "PRO", subscriptionId);
       return json({ success: true, result });
     }
 
-    const normalizedPlanId = (planId || "").toUpperCase() as PlanId;
     // Default: create subscription via GraphQL / checkout confirmationUrl
-    if (!normalizedPlanId || !["STARTER", "PRO", "SCALE"].includes(normalizedPlanId)) {
-      return json({ error: "Valid planId (STARTER, PRO, SCALE) is required" }, { status: 400 });
-    }
-
     const subscription = await createAppSubscription({
-      shop,
-      planId: normalizedPlanId,
+      shop: effectiveShop,
+      planId: "PRO",
       returnUrl,
+      adminClient,
     });
 
     return json({

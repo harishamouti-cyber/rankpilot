@@ -554,6 +554,7 @@ export async function getShopifyProducts(
             hasRollback: false,
           };
         });
+        console.log(`[getShopifyProducts] Live store sync active: Retrieved ${products.length} products directly from store ${shop}`);
       }
     } catch (e) {
       console.warn("Shopify GraphQL fetch failed, using local catalog:", e);
@@ -562,6 +563,7 @@ export async function getShopifyProducts(
 
   // Fallback to initial demo catalog only when disconnected / offline
   if (!isLiveStore) {
+    console.log(`[getShopifyProducts] Offline or unauthenticated mode: using demo catalog for ${shop}`);
     products = [...INITIAL_DEMO_PRODUCTS];
   }
 

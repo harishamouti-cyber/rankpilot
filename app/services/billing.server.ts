@@ -1,6 +1,6 @@
 import { db } from "~/db.server";
 
-export type PlanId = "STARTER" | "PRO" | "SCALE";
+export type PlanId = "PRO" | "STARTER" | "SCALE";
 
 export interface PlanDefinition {
   id: PlanId;
@@ -14,57 +14,26 @@ export interface PlanDefinition {
   recommended?: boolean;
 }
 
-export const PLANS: Record<PlanId, PlanDefinition> = {
-  STARTER: {
-    id: "STARTER",
-    name: "Starter",
-    price: 19,
-    interval: "EVERY_30_DAYS",
-    currency: "USD",
-    productLimit: 250,
-    trialDays: 0,
-    features: [
-      "Up to 250 Catalog SKUs",
-      "Automatic Schema.org JSON-LD Markup",
-      "Daily IndexNow Search Engine Sync",
-      "Basic SEO Title & Meta Descriptions",
-      "Standard E-Commerce Support",
-    ],
-  },
+export const PLANS: Record<string, PlanDefinition> = {
   PRO: {
     id: "PRO",
-    name: "Pro",
+    name: "RankPilot Pro",
     price: 29,
     interval: "EVERY_30_DAYS",
     currency: "USD",
-    productLimit: 2000,
+    productLimit: 1000000, // Unlimited Catalog SKUs
     trialDays: 7, // 7-day free trial
     recommended: true,
     features: [
-      "Up to 2,000 Catalog SKUs",
-      "Includes 7-Day Free Trial",
-      "Google AI Overview Spec Matrices",
+      "Full Catalog AI Search & Schema Optimization",
+      "Includes 7-Day Free Trial ($29/mo afterwards)",
+      "Google AI Overview & Generative Spec Matrices",
       "Conversational Buyer FAQ Generator",
-      "AI Citation Tracker & Grounding",
-      "1-Click Rollback Snapshot Engine",
-      "Instant IndexNow Crawler Pushes",
-    ],
-  },
-  SCALE: {
-    id: "SCALE",
-    name: "Scale",
-    price: 79,
-    interval: "EVERY_30_DAYS",
-    currency: "USD",
-    productLimit: 1000000, // Unlimited
-    trialDays: 0,
-    features: [
-      "Unlimited Catalog SKUs",
-      "Autopilot 24/7 Catalog Guard",
-      "Priority IndexNow Real-Time Webhooks",
-      "Competitor Gap Stealer (Amazon & DTC)",
-      "Zero-Latency /llms.txt AI Feeds",
-      "Dedicated High-Throughput Pipeline",
+      "Instant IndexNow Real-Time Crawler Sync",
+      "1-Click Rollback Snapshot History",
+      "Autopilot 24/7 Catalog Drift Sentinel",
+      "Competitor Semantic Gap Analysis",
+      "0ms Storefront Speed Impact",
     ],
   },
 };
@@ -116,13 +85,7 @@ export const APP_SUBSCRIPTION_CANCEL_MUTATION = `#graphql
  * Returns the currently active plan for the merchant store.
  */
 export async function getCurrentPlan(shop: string = "demo.myshopify.com"): Promise<PlanDefinition> {
-  const setting = await db.appSetting.findUnique({ where: { shop } });
-  const rawPlan = (setting?.plan || "PRO").toUpperCase();
-  const validPlanKey: PlanId = rawPlan === "STARTER" || rawPlan === "PRO" || rawPlan === "SCALE"
-    ? rawPlan
-    : "PRO";
-
-  return PLANS[validPlanKey];
+  return PLANS.PRO;
 }
 
 /**
@@ -130,22 +93,22 @@ export async function getCurrentPlan(shop: string = "demo.myshopify.com"): Promi
  */
 export async function createAppSubscription({
   shop = "demo.myshopify.com",
-  planId,
+  planId = "PRO",
   returnUrl,
   adminClient,
-  isTest = process.env.NODE_ENV !== "production",
+  isTest,
 }: {
   shop?: string;
-  planId: PlanId;
+  planId?: PlanId;
   returnUrl: string;
   adminClient?: any;
   isTest?: boolean;
 }) {
-  const plan = PLANS[planId];
-  if (!plan) throw new Error(`Invalid plan: ${planId}`);
+  const plan = PLANS[planId] || PLANS.PRO;
 
   let confirmationUrl: string = "";
   let subscriptionId: string = `sub_sim_${Date.now()}`;
+  const isTestCharge = isTest !== undefined ? isTest : (shop.includes("myshopify.com") || process.env.NODE_ENV !== "production");
 
   // If live Shopify GraphQL Admin context is present
   if (adminClient && typeof adminClient.graphql === "function") {
@@ -165,10 +128,10 @@ export async function createAppSubscription({
       ];
 
       const variables: Record<string, any> = {
-        name: `RankPilot ${plan.name} Plan`,
+        name: `RankPilot Pro Plan`,
         returnUrl,
         lineItems,
-        test: isTest,
+        test: isTestCharge,
       };
 
       if (plan.trialDays > 0) {
@@ -194,7 +157,7 @@ export async function createAppSubscription({
   // If running in development / test mode and no live confirmation URL was returned
   if (!confirmationUrl) {
     const separator = returnUrl.includes("?") ? "&" : "?";
-    confirmationUrl = `${returnUrl}${separator}charge_id=${subscriptionId}&plan=${planId}&confirmed=true`;
+    confirmationUrl = `${returnUrl}${separator}charge_id=${subscriptionId}&plan=PRO&confirmed=true`;
   }
 
   // Update AppSetting with pending subscription
@@ -202,13 +165,14 @@ export async function createAppSubscription({
     where: { shop },
     create: {
       shop,
-      plan: planId,
+      plan: "PRO",
       status: "ACTIVE",
       subscriptionId,
       subscriptionConfirmationUrl: confirmationUrl,
       trialEndsAt: plan.trialDays > 0 ? new Date(Date.now() + plan.trialDays * 86400000) : null,
     },
     update: {
+      plan: "PRO",
       subscriptionId,
       subscriptionConfirmationUrl: confirmationUrl,
       trialEndsAt: plan.trialDays > 0 ? new Date(Date.now() + plan.trialDays * 86400000) : null,
@@ -227,23 +191,19 @@ export async function createAppSubscription({
  */
 export async function confirmShopPlan(
   shop: string = "demo.myshopify.com",
-  planId: PlanId,
+  planId: PlanId = "PRO",
   subscriptionId?: string
 ) {
-  if (!PLANS[planId]) {
-    throw new Error(`Invalid plan: ${planId}`);
-  }
-
   const updated = await db.appSetting.upsert({
     where: { shop },
     create: {
       shop,
-      plan: planId,
+      plan: "PRO",
       status: "ACTIVE",
       subscriptionId: subscriptionId || `sub_${Date.now()}`,
     },
     update: {
-      plan: planId,
+      plan: "PRO",
       status: "ACTIVE",
       subscriptionId: subscriptionId || undefined,
     },
@@ -253,16 +213,16 @@ export async function confirmShopPlan(
     where: { shop },
     create: {
       shop,
-      planTier: planId,
+      planTier: "PRO",
       subscriptionId: subscriptionId || `sub_${Date.now()}`,
     },
     update: {
-      planTier: planId,
+      planTier: "PRO",
       subscriptionId: subscriptionId || undefined,
     },
   });
 
-  return { success: true, plan: PLANS[planId], setting: updated };
+  return { success: true, plan: PLANS.PRO, setting: updated };
 }
 
 /**
@@ -289,24 +249,25 @@ export async function cancelAppSubscription({
   await db.appSetting.update({
     where: { shop },
     data: {
-      plan: "STARTER",
+      plan: "PRO",
       subscriptionId: null,
+      status: "CANCELLED",
     },
   });
 
   await db.storeConfig.updateMany({
     where: { shop },
     data: {
-      planTier: "STARTER",
+      planTier: "PRO",
       subscriptionId: null,
     },
   });
 
-  return { success: true, plan: PLANS.STARTER };
+  return { success: true, plan: PLANS.PRO };
 }
 
 /**
- * Gating Middleware: Checks if the store's current plan allows a given operation.
+ * Gating Middleware: RankPilot Pro ($29/mo with 7-day free trial) includes all features.
  */
 export async function checkSubscriptionGating({
   shop = "demo.myshopify.com",
@@ -317,41 +278,5 @@ export async function checkSubscriptionGating({
   feature: "BULK_OPTIMIZE" | "AUTOPILOT" | "SPEC_MATRIX" | "BUYER_FAQ" | "COMPETITOR_STEAL";
   skuCount?: number;
 }): Promise<{ allowed: boolean; requiredPlan?: PlanId; reason?: string }> {
-  const plan = await getCurrentPlan(shop);
-
-  if (plan.id === "STARTER") {
-    if (feature === "AUTOPILOT") {
-      return {
-        allowed: false,
-        requiredPlan: "SCALE",
-        reason: "Autopilot 24/7 Catalog Guard requires the Scale plan.",
-      };
-    }
-    if (feature === "BULK_OPTIMIZE" && skuCount > 250) {
-      return {
-        allowed: false,
-        requiredPlan: "PRO",
-        reason: `Your catalog size (${skuCount} SKUs) exceeds Starter limit (250 SKUs). Upgrade to Pro or Scale.`,
-      };
-    }
-  }
-
-  if (plan.id === "PRO") {
-    if (feature === "AUTOPILOT") {
-      return {
-        allowed: false,
-        requiredPlan: "SCALE",
-        reason: "Autopilot 24/7 Catalog Guard requires the Scale plan ($79/mo).",
-      };
-    }
-    if (skuCount > 2000) {
-      return {
-        allowed: false,
-        requiredPlan: "SCALE",
-        reason: `Your catalog size (${skuCount} SKUs) exceeds Pro limit (2,000 SKUs). Upgrade to Scale for unlimited SKUs.`,
-      };
-    }
-  }
-
   return { allowed: true };
 }
