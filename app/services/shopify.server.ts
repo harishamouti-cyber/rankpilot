@@ -737,6 +737,12 @@ export async function getShopifyProducts(
       }
     } catch (e: any) {
       console.warn("[getShopifyProducts] Primary GraphQL query failed, attempting safe fallback query:", e?.message || e);
+      if (e?.message?.includes("403") || e?.message?.includes("Forbidden")) {
+        try {
+          await db.session.deleteMany({ where: { shop } });
+          console.warn(`[getShopifyProducts] 403 Forbidden detected. Purged stale session for ${shop}.`);
+        } catch {}
+      }
     }
 
     // Secondary fallback: if primary query failed or returned no nodes, execute streamlined safe query
@@ -774,6 +780,12 @@ export async function getShopifyProducts(
         }
       } catch (safeErr: any) {
         console.warn("[getShopifyProducts] Safe fallback query also failed:", safeErr?.message || safeErr);
+        if (safeErr?.message?.includes("403") || safeErr?.message?.includes("Forbidden")) {
+          try {
+            await db.session.deleteMany({ where: { shop } });
+            console.warn(`[getShopifyProducts] 403 Forbidden detected. Purged stale session for ${shop}.`);
+          } catch {}
+        }
       }
     }
   }
@@ -980,12 +992,19 @@ export async function applyOptimizationToProduct({
   }
 
   // 2. Modern Shopify GraphQL sync
+  const formattedProductId = productId.startsWith("gid://shopify/Product/")
+    ? productId
+    : `gid://shopify/Product/${productId}`;
+
+  let shopifySynced = false;
+  let shopifyErrorMessage = "";
+
   if (adminClient && typeof adminClient.graphql === "function") {
     // 2a. Update descriptionHtml & SEO Title & Description in Shopify Product
     try {
       const updateRes = await executeGraphQLWithThrottling(adminClient, PRODUCT_UPDATE_MUTATION, {
         input: {
-          id: productId,
+          id: formattedProductId,
           descriptionHtml: enhancedDescription,
           seo: {
             title: optimization.seoTitle,
@@ -995,102 +1014,104 @@ export async function applyOptimizationToProduct({
       });
       const updateErrors = updateRes.data?.productUpdate?.userErrors;
       if (updateErrors && updateErrors.length > 0) {
-        console.warn("[Shopify GraphQL] productUpdate userErrors:", updateErrors);
+        shopifyErrorMessage = updateErrors.map((e: any) => `${e.field || "Product"}: ${e.message}`).join("; ");
+        console.warn("[Shopify GraphQL] productUpdate userErrors:", shopifyErrorMessage);
+      } else if (updateRes.data?.productUpdate?.product?.id) {
+        shopifySynced = true;
       }
-    } catch (updErr) {
+    } catch (updErr: any) {
       console.warn("[Shopify GraphQL] productUpdate error:", updErr);
+      shopifyErrorMessage = updErr.message || String(updErr);
+      if (updErr.message?.includes("403") || updErr.message?.includes("Forbidden")) {
+        try {
+          await db.session.deleteMany({ where: { shop } });
+          console.warn(`[Shopify GraphQL] 403 Forbidden detected. Purged stale session for ${shop}.`);
+        } catch {}
+      }
     }
 
-    // 2b. Set Metafields via metafieldsSet
-    try {
-      const metafields = [
-        {
-          ownerId: productId,
-          namespace: "rankpilot",
-          key: "spec_matrix",
-          type: "multi_line_text_field",
-          value: optimization.specMatrixHtml,
-        },
-        {
-          ownerId: productId,
-          namespace: "rankpilot",
-          key: "spec_table",
-          type: "multi_line_text_field",
-          value: optimization.specMatrixHtml,
-        },
-        {
-          ownerId: productId,
-          namespace: "rankpilot",
-          key: "schema_json",
-          type: "json",
-          value: JSON.stringify(optimization.schemaJson),
-        },
-        {
-          ownerId: productId,
-          namespace: "rankpilot",
-          key: "faq_json",
-          type: "json",
-          value: JSON.stringify(optimization.faqList),
-        },
-        {
-          ownerId: productId,
-          namespace: "rankpilot",
-          key: "seo_score",
-          type: "number_integer",
-          value: optimization.aiScore.toString(),
-        },
-      ];
-
-      const metaRes = await executeGraphQLWithThrottling(adminClient, METAFIELDS_SET_MUTATION, { metafields });
-      const metaErrors = metaRes.data?.metafieldsSet?.userErrors;
-      if (metaErrors && metaErrors.length > 0) {
-        console.warn("[Shopify GraphQL] metafieldsSet userErrors:", metaErrors);
-      }
-    } catch (metaErr) {
-      console.warn("[Shopify GraphQL] metafieldsSet error, trying productSet fallback:", metaErr);
+    // 2b. If productUpdate failed, attempt fallback via productSet
+    if (!shopifySynced) {
       try {
         const input = {
-          id: productId,
+          id: formattedProductId,
           descriptionHtml: enhancedDescription,
           seo: {
             title: optimization.seoTitle,
             description: optimization.seoDescription,
           },
-          metafields: [
-            {
-              namespace: "rankpilot",
-              key: "spec_matrix",
-              type: "multi_line_text_field",
-              value: optimization.specMatrixHtml,
-            },
-            {
-              namespace: "rankpilot",
-              key: "schema_json",
-              type: "json",
-              value: JSON.stringify(optimization.schemaJson),
-            },
-            {
-              namespace: "rankpilot",
-              key: "faq_json",
-              type: "json",
-              value: JSON.stringify(optimization.faqList),
-            },
-            {
-              namespace: "rankpilot",
-              key: "seo_score",
-              type: "number_integer",
-              value: optimization.aiScore.toString(),
-            },
-          ],
         };
-        await executeGraphQLWithThrottling(adminClient, PRODUCT_SET_MUTATION, { input });
-      } catch (fallbackErr) {
+        const setRes = await executeGraphQLWithThrottling(adminClient, PRODUCT_SET_MUTATION, { input });
+        const setErrors = setRes.data?.productSet?.userErrors;
+        if (!setErrors || setErrors.length === 0) {
+          shopifySynced = true;
+          shopifyErrorMessage = "";
+        } else {
+          shopifyErrorMessage = setErrors.map((e: any) => `${e.field || "Product"}: ${e.message}`).join("; ");
+        }
+      } catch (fallbackErr: any) {
         console.warn("[Shopify GraphQL] productSet fallback error:", fallbackErr);
       }
     }
+
+    // 2c. Set Metafields via metafieldsSet (non-blocking for product body)
+    if (shopifySynced) {
+      try {
+        const metafields = [
+          {
+            ownerId: formattedProductId,
+            namespace: "rankpilot",
+            key: "spec_matrix",
+            type: "multi_line_text_field",
+            value: optimization.specMatrixHtml,
+          },
+          {
+            ownerId: formattedProductId,
+            namespace: "rankpilot",
+            key: "spec_table",
+            type: "multi_line_text_field",
+            value: optimization.specMatrixHtml,
+          },
+          {
+            ownerId: formattedProductId,
+            namespace: "rankpilot",
+            key: "schema_json",
+            type: "json",
+            value: JSON.stringify(optimization.schemaJson),
+          },
+          {
+            ownerId: formattedProductId,
+            namespace: "rankpilot",
+            key: "faq_json",
+            type: "json",
+            value: JSON.stringify(optimization.faqList),
+          },
+          {
+            ownerId: formattedProductId,
+            namespace: "rankpilot",
+            key: "seo_score",
+            type: "number_integer",
+            value: optimization.aiScore.toString(),
+          },
+        ];
+        await executeGraphQLWithThrottling(adminClient, METAFIELDS_SET_MUTATION, { metafields });
+      } catch (metaErr) {
+        console.warn("[Shopify GraphQL] metafieldsSet notice:", metaErr);
+      }
+    } else {
+      throw new Error(`Shopify product update rejected: ${shopifyErrorMessage || "Could not write to store catalog"}`);
+    }
   }
 
-  return { success: true, aiScore: optimization.aiScore, descriptionHtml: enhancedDescription };
+  return {
+    success: true,
+    shopifySynced,
+    aiScore: optimization.aiScore,
+    descriptionHtml: enhancedDescription,
+    warning: !adminClient
+      ? "Store offline: Changes saved in RankPilot, but Shopify store connection was not active. Click 'Sync Store Products' to reconnect."
+      : undefined,
+  };
 }
 
 /**

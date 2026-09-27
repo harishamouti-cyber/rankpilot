@@ -87,5 +87,23 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
   }
 
+  // 5. Purge stale/revoked sessions if requested or if 403 Forbidden detected
+  const isPurgeRequested = url.searchParams.get("purge") === "true";
+  const has403Error =
+    diagnostics.shopQueryError?.includes("403") ||
+    diagnostics.productsQueryError?.includes("403") ||
+    diagnostics.authenticateAdminError?.includes("403");
+
+  if (isPurgeRequested || has403Error) {
+    try {
+      const deleteResult = await db.session.deleteMany({ where: { shop } });
+      diagnostics.purgedSessionsCount = deleteResult.count;
+      diagnostics.staleSessionPurged = true;
+      diagnostics.purgeReason = isPurgeRequested ? "MANUAL_PURGE_REQUEST" : "AUTOMATIC_403_FORBIDDEN_PURGE";
+    } catch (purgeErr: any) {
+      diagnostics.purgeError = purgeErr.message;
+    }
+  }
+
   return json(diagnostics);
 };

@@ -669,6 +669,9 @@ export default function AppDashboard() {
     optimization: OptimizationResult
   ) => {
     setIsApplying(true);
+    setToastTone("info");
+    setToastMessage(`⏳ Pushing "${product.title}" to Shopify store... Updating product description, specs, and FAQs.`);
+
     try {
       const res = await appFetch("/api/apply", {
         method: "POST",
@@ -681,6 +684,11 @@ export default function AppDashboard() {
         }),
       });
       const data = await res.json();
+
+      if (!res.ok || !data.success || data.error) {
+        throw new Error(data.error || "Shopify product update rejected by store API.");
+      }
+
       const updatedDesc = data.updatedDescriptionHtml || product.descriptionHtml;
       // Persist optimization in localStorage so it never reverts
       saveStoredOptimization(shop, product.id, {
@@ -729,15 +737,23 @@ export default function AppDashboard() {
       });
 
       setActiveModal(null);
-      setToastTone("success");
-      setToastMessage(
-        `✓ "${product.title}" optimized & synced! Instant snapshot created. ${
-          data.indexNowPinged ? "IndexNow ping dispatched to search engines." : ""
-        }`
-      );
+      if (data.shopifySynced === false) {
+        setToastTone("info");
+        setToastMessage(
+          data.warning ||
+            `⚠️ "${product.title}" saved in RankPilot, but Shopify store connection was offline. Click "Sync Store Products" to reconnect.`
+        );
+      } else {
+        setToastTone("success");
+        setToastMessage(
+          `✓ "${product.title}" pushed to Shopify store! Description, Spec Table & FAQs are now live in your store. ${
+            data.indexNowPinged ? "IndexNow ping dispatched to search engines." : ""
+          }`
+        );
+      }
     } catch (err: any) {
       setToastTone("critical");
-      setToastMessage(`Apply error: ${err.message}`);
+      setToastMessage(`Shopify push failed: ${err.message}`);
     } finally {
       setIsApplying(false);
     }

@@ -2,6 +2,7 @@ import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { authenticate, unauthenticated } from "~/shopify.server";
 import { getShopifyProducts } from "~/services/shopify.server";
+import { db } from "~/db.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -23,6 +24,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     } catch (uErr: any) {
       authError += " | unauth: " + (uErr?.message || String(uErr));
     }
+  }
+
+  if (authError?.includes("403") || authError?.includes("Forbidden") || url.searchParams.get("purge") === "true") {
+    try {
+      await db.session.deleteMany({ where: { shop } });
+    } catch {}
   }
 
   const products = await getShopifyProducts(shop, adminClient);

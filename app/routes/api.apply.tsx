@@ -78,12 +78,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return json({
       success: true,
       result,
+      shopifySynced: result.shopifySynced ?? false,
+      warning: result.warning,
       updatedDescriptionHtml: result.descriptionHtml,
       indexNowPinged: autoPing,
       indexNowResult,
     });
   } catch (error: any) {
     console.error("api.apply error:", error);
-    return json({ error: error.message || "Failed to apply optimization" }, { status: 500 });
+    return json({ success: false, error: error.message || "Failed to apply optimization" }, { status: 500 });
   }
 };

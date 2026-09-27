@@ -11,6 +11,7 @@ import {
   ButtonGroup,
   Divider,
   ProgressBar,
+  Banner,
 } from "@shopify/polaris";
 import {
   UndoIcon,
@@ -742,6 +743,16 @@ export function OptimizationModal({
           {/* ========================================================================= */}
           {/* CUSTOM MODAL FOOTER                                                       */}
           {/* ========================================================================= */}
+          {isApplying && (
+            <Box paddingBlockEnd="300">
+              <Banner tone="info">
+                <p>
+                  <strong>Pushing to Shopify Store...</strong> Updating product description, structured specification matrix, and buyer FAQs live in your Shopify catalog.
+                </p>
+              </Banner>
+            </Box>
+          )}
+
           <Divider />
 
           <InlineStack align="space-between" blockAlign="center">
@@ -773,7 +784,7 @@ export function OptimizationModal({
                 disabled={isApplying}
                 onClick={() => onApply(product, optimization)}
               >
-                Apply &amp; Push to Store
+                {isApplying ? "Pushing to Store..." : "Apply & Push to Store"}
               </Button>
             </ButtonGroup>
           </InlineStack>
