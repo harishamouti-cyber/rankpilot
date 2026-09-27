@@ -1,10 +1,12 @@
-import type { LinksFunction, MetaFunction } from "@remix-run/node";
+import type { LinksFunction, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import {
   Links,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLoaderData,
 } from "@remix-run/react";
 import { AppProvider } from "@shopify/polaris";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
@@ -29,10 +31,21 @@ export const meta: MetaFunction = () => [
   { name: "keywords", content: "GEO, AI SEO, Schema, AI Overviews, Generative Search" },
 ];
 
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  return json({
+    apiKey: process.env.SHOPIFY_API_KEY || "82464865c45f23d73b21b486de6ace7a",
+  });
+};
+
 export default function App() {
+  const { apiKey } = useLoaderData<typeof loader>();
   return (
     <html lang="en">
       <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="shopify-api-key" content={apiKey} />
+        <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
         <Meta />
         <Links />
       </head>
