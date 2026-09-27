@@ -1106,7 +1106,7 @@ export async function rollbackProduct({
   shop?: string;
   adminClient?: any;
 }) {
-  const optRecord = await db.productOptimization.findUnique({
+  let optRecord = await db.productOptimization.findUnique({
     where: { shop_productId: { shop, productId } },
     include: {
       revisions: {
@@ -1116,32 +1116,54 @@ export async function rollbackProduct({
     },
   });
 
-  if (!optRecord || optRecord.revisions.length === 0) {
+  let snapshot = optRecord?.revisions?.[0];
+  if (!snapshot) {
+    snapshot = (await db.revisionHistory.findFirst({
+      where: { shop, productId },
+      orderBy: { createdAt: "desc" },
+    })) as any;
+  }
+
+  if (!snapshot) {
+    const demoItem = INITIAL_DEMO_PRODUCTS.find((p) => p.id === productId);
+    if (demoItem) {
+      demoItem.optimizationStatus = "NEEDS_OPTIMIZATION";
+      demoItem.aiScore = 38;
+      demoItem.geoScore = 38;
+      demoItem.hasRollback = false;
+      return { success: true, restoredTitle: demoItem.title, restoredDescription: demoItem.descriptionHtml };
+    }
     throw new Error("No previous revision snapshot found to roll back to.");
   }
 
-  const snapshot = optRecord.revisions[0];
+  // Mark revision as rolled back if present
+  if (snapshot.id) {
+    try {
+      await db.revisionHistory.update({
+        where: { id: snapshot.id },
+        data: { rolledBack: true },
+      });
+    } catch {}
+  }
 
-  // Mark revision as rolled back
-  await db.revisionHistory.update({
-    where: { id: snapshot.id },
-    data: { rolledBack: true },
-  });
-
-  // Reset ProductOptimization state in SQLite
-  await db.productOptimization.update({
-    where: { id: optRecord.id },
-    data: {
-      status: "NEEDS_OPTIMIZATION",
-      geoScore: 38,
-      aiScore: 38,
-      optimizedTitle: snapshot.seoTitleSnapshot,
-      optimizedMetaDesc: snapshot.seoDescriptionSnapshot,
-      specMatrixHtml: null,
-      faqJson: null,
-      schemaJson: null,
-    },
-  });
+  // Reset ProductOptimization state in SQLite if record exists
+  if (optRecord?.id) {
+    try {
+      await db.productOptimization.update({
+        where: { id: optRecord.id },
+        data: {
+          status: "NEEDS_OPTIMIZATION",
+          geoScore: 38,
+          aiScore: 38,
+          optimizedTitle: snapshot.seoTitleSnapshot,
+          optimizedMetaDesc: snapshot.seoDescriptionSnapshot,
+          specMatrixHtml: null,
+          faqJson: null,
+          schemaJson: null,
+        },
+      });
+    } catch {}
+  }
 
   // Revert in-memory demo item
   const demoItem = INITIAL_DEMO_PRODUCTS.find((p) => p.id === productId);
