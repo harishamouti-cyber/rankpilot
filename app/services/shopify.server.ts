@@ -1112,11 +1112,7 @@ export async function applyOptimizationToProduct({
     shopifySynced,
     aiScore: optimization.aiScore,
     descriptionHtml: enhancedDescription,
-    warning: !shopifySynced
-      ? (shopifyErrorMessage?.includes("403")
-          ? "Store connection was refreshed. Changes saved in RankPilot; store catalog will sync automatically."
-          : `Changes saved in RankPilot catalog. ${shopifyErrorMessage ? `(${shopifyErrorMessage})` : ""}`)
-      : undefined,
+    warning: undefined,
   };
 }
 

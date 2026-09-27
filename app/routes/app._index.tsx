@@ -418,7 +418,6 @@ export default function AppDashboard() {
   const [isApplying, setIsApplying] = useState(false);
   const [applySuccess, setApplySuccess] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
-  const [applyWarning, setApplyWarning] = useState<string | null>(null);
   const [pushedSuccessBanner, setPushedSuccessBanner] = useState<{
     title: string;
     id: string;
@@ -603,7 +602,6 @@ export default function AppDashboard() {
     setSelectedProduct(product);
     setApplySuccess(false);
     setApplyError(null);
-    setApplyWarning(null);
 
     if (isProdOptimized(product) && product.rankpilotMetafields?.specMatrix) {
       let parsedFaq = [];
@@ -646,7 +644,6 @@ export default function AppDashboard() {
     setSelectedProduct(product);
     setApplySuccess(false);
     setApplyError(null);
-    setApplyWarning(null);
     setIsOptimizing(true);
     setCurrentOptimization(null);
 
@@ -684,7 +681,6 @@ export default function AppDashboard() {
   ) => {
     setIsApplying(true);
     setApplyError(null);
-    setApplyWarning(null);
     setToastTone("info");
     const pushMsg = `⏳ Pushing "${product.title}" to Shopify store... Updating product description, specs, and FAQs.`;
     setToastMessage(pushMsg);
@@ -760,9 +756,6 @@ export default function AppDashboard() {
 
       // Keep modal open with persistent success banner
       setApplySuccess(true);
-      if (data.warning) {
-        setApplyWarning(data.warning);
-      }
       setPushedSuccessBanner({
         title: product.title,
         id: product.id,
@@ -1867,14 +1860,12 @@ export default function AppDashboard() {
           setActiveModal(null);
           setApplySuccess(false);
           setApplyError(null);
-          setApplyWarning(null);
         }}
         product={selectedProduct}
         optimization={currentOptimization}
         isApplying={isApplying}
         applySuccess={applySuccess}
         applyError={applyError}
-        warningMessage={applyWarning}
         shop={shop}
         onApply={handleApplyOptimization}
         onRevert={handleRollback}

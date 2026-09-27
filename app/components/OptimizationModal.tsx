@@ -27,7 +27,6 @@ interface OptimizationModalProps {
   isApplying: boolean;
   applySuccess?: boolean;
   applyError?: string | null;
-  warningMessage?: string | null;
   shop?: string;
   onApply: (product: ShopifyProductItem, optimization: OptimizationResult) => void;
   onRevert?: (productId: string) => void;
@@ -41,7 +40,6 @@ export function OptimizationModal({
   isApplying,
   applySuccess = false,
   applyError = null,
-  warningMessage = null,
   shop = "",
   onApply,
   onRevert,
@@ -768,11 +766,6 @@ export function OptimizationModal({
                   <p style={{ color: "#374151", fontSize: "13px" }}>
                     The product description now includes the introductory overview, structured specifications table, and buyer FAQs.
                   </p>
-                  {warningMessage && (
-                    <p style={{ color: "#78350f", fontSize: "12px", background: "#fef3c7", padding: "6px 10px", borderRadius: "4px" }}>
-                      ℹ️ {warningMessage}
-                    </p>
-                  )}
                 </BlockStack>
               </Banner>
             </Box>
