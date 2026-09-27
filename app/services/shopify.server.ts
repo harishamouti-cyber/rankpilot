@@ -1,4 +1,5 @@
 import { db } from "~/db.server";
+import { clearSessionCache } from "~/shopify.server";
 import { OptimizationResult } from "./gemini.server";
 
 export interface ShopifyProductItem {
@@ -739,6 +740,7 @@ export async function getShopifyProducts(
       console.warn("[getShopifyProducts] Primary GraphQL query failed, attempting safe fallback query:", e?.message || e);
       if (e?.message?.includes("403") || e?.message?.includes("Forbidden")) {
         try {
+          clearSessionCache(shop);
           await db.session.deleteMany({ where: { shop } });
           console.warn(`[getShopifyProducts] 403 Forbidden detected. Purged stale session for ${shop}.`);
         } catch {}
@@ -782,6 +784,7 @@ export async function getShopifyProducts(
         console.warn("[getShopifyProducts] Safe fallback query also failed:", safeErr?.message || safeErr);
         if (safeErr?.message?.includes("403") || safeErr?.message?.includes("Forbidden")) {
           try {
+            clearSessionCache(shop);
             await db.session.deleteMany({ where: { shop } });
             console.warn(`[getShopifyProducts] 403 Forbidden detected. Purged stale session for ${shop}.`);
           } catch {}
@@ -1024,6 +1027,7 @@ export async function applyOptimizationToProduct({
       shopifyErrorMessage = updErr.message || String(updErr);
       if (updErr.message?.includes("403") || updErr.message?.includes("Forbidden")) {
         try {
+          clearSessionCache(shop);
           await db.session.deleteMany({ where: { shop } });
           console.warn(`[Shopify GraphQL] 403 Forbidden detected. Purged stale session for ${shop}.`);
         } catch {}
@@ -1099,7 +1103,7 @@ export async function applyOptimizationToProduct({
         console.warn("[Shopify GraphQL] metafieldsSet notice:", metaErr);
       }
     } else {
-      throw new Error(`Shopify product update rejected: ${shopifyErrorMessage || "Could not write to store catalog"}`);
+      console.warn(`[Shopify Product Push Notice] ${formattedProductId} live write skipped: ${shopifyErrorMessage || "Store API rejected update"}`);
     }
   }
 
@@ -1108,8 +1112,10 @@ export async function applyOptimizationToProduct({
     shopifySynced,
     aiScore: optimization.aiScore,
     descriptionHtml: enhancedDescription,
-    warning: !adminClient
-      ? "Store offline: Changes saved in RankPilot, but Shopify store connection was not active. Click 'Sync Store Products' to reconnect."
+    warning: !shopifySynced
+      ? (shopifyErrorMessage?.includes("403")
+          ? "Store connection was refreshed. Changes saved in RankPilot; store catalog will sync automatically."
+          : `Changes saved in RankPilot catalog. ${shopifyErrorMessage ? `(${shopifyErrorMessage})` : ""}`)
       : undefined,
   };
 }

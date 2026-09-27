@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { authenticate, unauthenticated } from "~/shopify.server";
+import { authenticate, unauthenticated, clearSessionCache } from "~/shopify.server";
 import { GET_PRODUCTS_QUERY, executeGraphQLWithThrottling } from "~/services/shopify.server";
 import { db } from "~/db.server";
 
@@ -25,6 +25,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     diagnostics.storedSessions = sessions.map((s) => ({
       id: s.id,
       shop: s.shop,
+      scope: s.scope,
       isOnline: s.isOnline,
       expires: s.expires,
       hasAccessToken: Boolean(s.accessToken),
@@ -96,6 +97,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   if (isPurgeRequested || has403Error) {
     try {
+      clearSessionCache(shop);
       const deleteResult = await db.session.deleteMany({ where: { shop } });
       diagnostics.purgedSessionsCount = deleteResult.count;
       diagnostics.staleSessionPurged = true;

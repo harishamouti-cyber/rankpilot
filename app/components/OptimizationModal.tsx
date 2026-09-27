@@ -26,6 +26,8 @@ interface OptimizationModalProps {
   optimization: OptimizationResult | null;
   isApplying: boolean;
   applySuccess?: boolean;
+  applyError?: string | null;
+  warningMessage?: string | null;
   shop?: string;
   onApply: (product: ShopifyProductItem, optimization: OptimizationResult) => void;
   onRevert?: (productId: string) => void;
@@ -38,6 +40,8 @@ export function OptimizationModal({
   optimization,
   isApplying,
   applySuccess = false,
+  applyError = null,
+  warningMessage = null,
   shop = "",
   onApply,
   onRevert,
@@ -763,6 +767,24 @@ export function OptimizationModal({
                   </p>
                   <p style={{ color: "#374151", fontSize: "13px" }}>
                     The product description now includes the introductory overview, structured specifications table, and buyer FAQs.
+                  </p>
+                  {warningMessage && (
+                    <p style={{ color: "#78350f", fontSize: "12px", background: "#fef3c7", padding: "6px 10px", borderRadius: "4px" }}>
+                      ℹ️ {warningMessage}
+                    </p>
+                  )}
+                </BlockStack>
+              </Banner>
+            </Box>
+          )}
+
+          {applyError && !isApplying && !applySuccess && (
+            <Box paddingBlockEnd="300">
+              <Banner tone="critical" title="Could not complete Shopify push">
+                <BlockStack gap="100">
+                  <p>{applyError}</p>
+                  <p style={{ fontSize: "12px", color: "#6b7280" }}>
+                    Changes are saved in your RankPilot catalog. Click "Apply & Push to Store" below to retry sending updates to Shopify.
                   </p>
                 </BlockStack>
               </Banner>

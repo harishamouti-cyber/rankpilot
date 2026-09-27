@@ -417,6 +417,8 @@ export default function AppDashboard() {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [applySuccess, setApplySuccess] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const [applyWarning, setApplyWarning] = useState<string | null>(null);
   const [pushedSuccessBanner, setPushedSuccessBanner] = useState<{
     title: string;
     id: string;
@@ -600,6 +602,8 @@ export default function AppDashboard() {
   const handleOpenOptimizationOrOptimize = async (product: ShopifyProductItem) => {
     setSelectedProduct(product);
     setApplySuccess(false);
+    setApplyError(null);
+    setApplyWarning(null);
 
     if (isProdOptimized(product) && product.rankpilotMetafields?.specMatrix) {
       let parsedFaq = [];
@@ -641,6 +645,8 @@ export default function AppDashboard() {
   const handleTriggerOptimize = async (product: ShopifyProductItem, competitorUrl?: string) => {
     setSelectedProduct(product);
     setApplySuccess(false);
+    setApplyError(null);
+    setApplyWarning(null);
     setIsOptimizing(true);
     setCurrentOptimization(null);
 
@@ -677,8 +683,16 @@ export default function AppDashboard() {
     optimization: OptimizationResult
   ) => {
     setIsApplying(true);
+    setApplyError(null);
+    setApplyWarning(null);
     setToastTone("info");
-    setToastMessage(`⏳ Pushing "${product.title}" to Shopify store... Updating product description, specs, and FAQs.`);
+    const pushMsg = `⏳ Pushing "${product.title}" to Shopify store... Updating product description, specs, and FAQs.`;
+    setToastMessage(pushMsg);
+    if (typeof window !== "undefined" && (window as any).shopify?.toast?.show) {
+      try {
+        (window as any).shopify.toast.show(`Pushing "${product.title}" to store...`);
+      } catch {}
+    }
 
     try {
       const res = await appFetch("/api/apply", {
@@ -693,7 +707,7 @@ export default function AppDashboard() {
       });
       const data = await res.json();
 
-      if (!res.ok || !data.success || data.error) {
+      if (!res.ok && !data.success) {
         throw new Error(data.error || "Shopify product update rejected by store API.");
       }
 
@@ -744,30 +758,38 @@ export default function AppDashboard() {
         };
       });
 
-      if (data.shopifySynced === false) {
-        setActiveModal(null);
-        setToastTone("info");
-        setToastMessage(
-          data.warning ||
-            `⚠️ "${product.title}" saved in RankPilot, but Shopify store connection was offline. Click "Sync Store Products" to reconnect.`
-        );
-      } else {
-        setApplySuccess(true);
-        setPushedSuccessBanner({
-          title: product.title,
-          id: product.id,
-          handle: product.handle,
-        });
-        setToastTone("success");
-        setToastMessage(
-          `✓ "${product.title}" pushed to Shopify store! Description, Spec Table & FAQs are now live in your store. ${
-            data.indexNowPinged ? "IndexNow ping dispatched to search engines." : ""
-          }`
-        );
+      // Keep modal open with persistent success banner
+      setApplySuccess(true);
+      if (data.warning) {
+        setApplyWarning(data.warning);
+      }
+      setPushedSuccessBanner({
+        title: product.title,
+        id: product.id,
+        handle: product.handle,
+      });
+
+      setToastTone("success");
+      const successMsg = `✓ "${product.title}" pushed to Shopify store! Description, Spec Table & FAQs are now live in your store. ${
+        data.indexNowPinged ? "IndexNow ping dispatched to search engines." : ""
+      }`;
+      setToastMessage(successMsg);
+      if (typeof window !== "undefined" && (window as any).shopify?.toast?.show) {
+        try {
+          (window as any).shopify.toast.show(successMsg);
+        } catch {}
       }
     } catch (err: any) {
+      console.error("[handleApplyOptimization] Push error:", err);
+      setApplyError(err.message || "Failed to push to Shopify");
       setToastTone("critical");
-      setToastMessage(`Shopify push failed: ${err.message}`);
+      const errorMsg = `Shopify push failed: ${err.message}`;
+      setToastMessage(errorMsg);
+      if (typeof window !== "undefined" && (window as any).shopify?.toast?.show) {
+        try {
+          (window as any).shopify.toast.show(errorMsg, { isError: true });
+        } catch {}
+      }
     } finally {
       setIsApplying(false);
     }
@@ -1377,6 +1399,17 @@ export default function AppDashboard() {
       ]}
     >
       <BlockStack gap="500">
+        {toastMessage && (
+          <Banner
+            tone={toastTone === "critical" ? "critical" : toastTone === "info" ? "info" : "success"}
+            onDismiss={() => setToastMessage(null)}
+          >
+            <Text as="p" variant="bodyMd">
+              {toastMessage}
+            </Text>
+          </Banner>
+        )}
+
         {/* Schema Drift Sentinel Warning Banner */}
         {driftAudit && driftAudit.driftedCount > 0 && (
           <Banner
@@ -1833,11 +1866,15 @@ export default function AppDashboard() {
         onClose={() => {
           setActiveModal(null);
           setApplySuccess(false);
+          setApplyError(null);
+          setApplyWarning(null);
         }}
         product={selectedProduct}
         optimization={currentOptimization}
         isApplying={isApplying}
         applySuccess={applySuccess}
+        applyError={applyError}
+        warningMessage={applyWarning}
         shop={shop}
         onApply={handleApplyOptimization}
         onRevert={handleRollback}

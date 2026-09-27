@@ -11,6 +11,18 @@ import { db } from "./db.server";
 
 const memorySessionCache = new Map<string, Session>();
 
+export function clearSessionCache(shop?: string) {
+  if (shop) {
+    for (const [id, session] of memorySessionCache.entries()) {
+      if (session.shop === shop) {
+        memorySessionCache.delete(id);
+      }
+    }
+  } else {
+    memorySessionCache.clear();
+  }
+}
+
 class PrismaSessionStorageAdapter implements SessionStorage {
   async storeSession(session: Session): Promise<boolean> {
     memorySessionCache.set(session.id, session);
