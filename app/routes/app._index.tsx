@@ -307,25 +307,44 @@ export default function AppDashboard() {
   }, [shop]);
 
   // Fast token-authenticated live catalog sync using App Bridge Bearer token
+  // Fast token-authenticated live catalog sync using App Bridge Bearer token
   const syncStoreCatalog = useCallback(async () => {
     setIsSyncingStore(true);
     const startTime = performance.now();
     try {
       const res = await appFetch(`/api/catalog?shop=${encodeURIComponent(shop)}&t=${Date.now()}`);
       const data = await res.json();
-      if (data.success && Array.isArray(data.products) && data.products.length > 0) {
-        const merged = mergeProductsWithLocalOptimizations(data.products, shop);
-        setProducts(merged);
-        const aiReadyCount = merged.filter((p: any) => isProdOptimized(p)).length;
-        setMetrics((prev) => ({
-          ...prev,
-          totalProducts: merged.length,
-          aiReadyCount,
-          aiReadyPercentage: merged.length > 0 ? Math.round((aiReadyCount / merged.length) * 100) : 0,
-        }));
-        const duration = Math.max(0.2, (performance.now() - startTime) / 1000).toFixed(1);
-        setToastTone("success");
-        setToastMessage(`✓ Catalog synced in ${duration}s! ${merged.length} products loaded.`);
+      if (data.success && Array.isArray(data.products)) {
+        if (data.products.length > 0) {
+          const merged = mergeProductsWithLocalOptimizations(data.products, shop);
+          setProducts(merged);
+          const aiReadyCount = merged.filter((p: any) => isProdOptimized(p)).length;
+          setMetrics((prev) => ({
+            ...prev,
+            totalProducts: merged.length,
+            aiReadyCount,
+            aiReadyPercentage: merged.length > 0 ? Math.round((aiReadyCount / merged.length) * 100) : 0,
+          }));
+          const duration = Math.max(0.2, (performance.now() - startTime) / 1000).toFixed(1);
+          setToastTone("success");
+          const msg = `✓ Catalog synced in ${duration}s! ${merged.length} live product(s) loaded from your Shopify store.`;
+          setToastMessage(msg);
+          if (typeof window !== "undefined" && (window as any).shopify?.toast?.show) {
+            try {
+              (window as any).shopify.toast.show(msg);
+            } catch {}
+          }
+        } else {
+          setProducts([]);
+          setMetrics((prev) => ({
+            ...prev,
+            totalProducts: 0,
+            aiReadyCount: 0,
+            aiReadyPercentage: 0,
+          }));
+          setToastTone("info");
+          setToastMessage("Connected to Shopify store: 0 products found. Add products in your Shopify Admin to optimize them.");
+        }
       } else {
         setToastTone("info");
         setToastMessage("Catalog is already up to date.");
@@ -526,11 +545,7 @@ export default function AppDashboard() {
     { label: "Product Title", value: "title desc", directionLabel: "Z to A" },
   ];
 
-  // Sync state if revalidated
-  React.useEffect(() => {
-    setProducts(initialProducts);
-    setMetrics(initialMetrics);
-  }, [initialProducts, initialMetrics]);
+
 
   // Derived filtered product collections
   const unoptimizedProducts = useMemo(
@@ -1683,10 +1698,16 @@ export default function AppDashboard() {
               title={`Successfully pushed "${pushedSuccessBanner.title}" to Shopify catalog!`}
               onDismiss={() => setPushedSuccessBanner(null)}
               action={
-                shop && pushedSuccessBanner.id
+                shop
                   ? {
-                      content: "Open Product in Shopify Admin ↗",
-                      url: `https://admin.shopify.com/store/${shop.replace(".myshopify.com", "")}/products/${pushedSuccessBanner.id.replace("gid://shopify/Product/", "")}`,
+                      content:
+                        pushedSuccessBanner.id && !pushedSuccessBanner.id.includes("8472917")
+                          ? "Open Product in Shopify Admin ↗"
+                          : "Open Shopify Products Catalog ↗",
+                      url:
+                        pushedSuccessBanner.id && !pushedSuccessBanner.id.includes("8472917")
+                          ? `https://admin.shopify.com/store/${shop.replace(".myshopify.com", "")}/products/${pushedSuccessBanner.id.replace("gid://shopify/Product/", "")}`
+                          : `https://admin.shopify.com/store/${shop.replace(".myshopify.com", "")}/products`,
                       target: "_blank",
                     }
                   : undefined

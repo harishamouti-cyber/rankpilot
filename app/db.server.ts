@@ -141,6 +141,8 @@ export async function ensureDatabaseSchema() {
         "scope" TEXT,
         "expires" DATETIME,
         "accessToken" TEXT NOT NULL,
+        "refreshToken" TEXT,
+        "refreshTokenExpires" DATETIME,
         "userId" BIGINT,
         "firstName" TEXT,
         "lastName" TEXT,
@@ -151,6 +153,14 @@ export async function ensureDatabaseSchema() {
         "emailVerified" BOOLEAN DEFAULT false
       );
     `);
+
+    // Self-healing migration for existing Session tables
+    try {
+      await db.$executeRawUnsafe(`ALTER TABLE "Session" ADD COLUMN "refreshToken" TEXT;`);
+    } catch {}
+    try {
+      await db.$executeRawUnsafe(`ALTER TABLE "Session" ADD COLUMN "refreshTokenExpires" DATETIME;`);
+    } catch {}
 
     await db.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "StrikingDistanceQuery" (

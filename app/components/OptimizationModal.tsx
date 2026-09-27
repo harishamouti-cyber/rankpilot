@@ -807,13 +807,19 @@ export function OptimizationModal({
             {/* Right Action: Cancel and Apply / Done */}
             {applySuccess ? (
               <ButtonGroup>
-                {shop && product.id && (
+                {shop && (
                   <Button
                     variant="plain"
-                    url={`https://admin.shopify.com/store/${shop.replace(".myshopify.com", "")}/products/${product.id.replace("gid://shopify/Product/", "")}`}
+                    url={
+                      product.id && !product.id.includes("8472917")
+                        ? `https://admin.shopify.com/store/${shop.replace(".myshopify.com", "")}/products/${product.id.replace("gid://shopify/Product/", "")}`
+                        : `https://admin.shopify.com/store/${shop.replace(".myshopify.com", "")}/products`
+                    }
                     target="_blank"
                   >
-                    View in Shopify Products ↗
+                    {product.id && !product.id.includes("8472917")
+                      ? "View in Shopify Products ↗"
+                      : "View Shopify Products Catalog ↗"}
                   </Button>
                 )}
                 <Button

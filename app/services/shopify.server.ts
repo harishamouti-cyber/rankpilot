@@ -394,7 +394,7 @@ query GetProducts($first: Int!, $after: String) {
         url
         altText
       }
-      priceRange {
+      priceRangeV2 {
         minVariantPrice {
           amount
           currencyCode
@@ -404,11 +404,17 @@ query GetProducts($first: Int!, $after: String) {
         title
         description
       }
-      metafields(first: 10, namespace: "rankpilot") {
-        nodes {
-          key
-          value
-        }
+      specMatrix: metafield(namespace: "rankpilot", key: "spec_matrix") {
+        value
+      }
+      schemaJson: metafield(namespace: "rankpilot", key: "schema_json") {
+        value
+      }
+      faqJson: metafield(namespace: "rankpilot", key: "faq_json") {
+        value
+      }
+      seoScore: metafield(namespace: "rankpilot", key: "seo_score") {
+        value
       }
     }
   }
@@ -682,24 +688,23 @@ export async function getShopifyProducts(
   if (adminClient && typeof adminClient.graphql === "function") {
     try {
       const data = await executeGraphQLWithThrottling<any>(adminClient, GET_PRODUCTS_QUERY, { first: 50 });
-      if (data?.data?.products?.nodes && data.data.products.nodes.length > 0) {
+      if (data?.data?.products?.nodes !== undefined) {
         isLiveStore = true;
         products = data.data.products.nodes.map((node: any) => {
-          const specMatrixNode = node.metafields?.nodes?.find(
-            (m: any) => m.key === "spec_matrix"
-          );
-          const schemaJsonNode = node.metafields?.nodes?.find(
-            (m: any) => m.key === "schema_json"
-          );
-          const faqJsonNode = node.metafields?.nodes?.find(
-            (m: any) => m.key === "faq_json"
-          );
-          const seoScoreNode = node.metafields?.nodes?.find(
-            (m: any) => m.key === "seo_score"
-          );
+          const specMatrix = node.specMatrix?.value;
+          const schemaJson = node.schemaJson?.value;
+          const faqJson = node.faqJson?.value;
+          const seoScoreVal = node.seoScore?.value;
+          const seoScore = seoScoreVal ? parseInt(seoScoreVal, 10) : undefined;
 
-          const minPrice = node.priceRange?.minVariantPrice?.amount || node.priceRangeV2?.minVariantPrice?.amount || "0.00";
-          const currency = node.priceRange?.minVariantPrice?.currencyCode || node.priceRangeV2?.minVariantPrice?.currencyCode || "USD";
+          const minPrice =
+            node.priceRangeV2?.minVariantPrice?.amount ||
+            node.priceRange?.minVariantPrice?.amount ||
+            "0.00";
+          const currency =
+            node.priceRangeV2?.minVariantPrice?.currencyCode ||
+            node.priceRange?.minVariantPrice?.currencyCode ||
+            "USD";
 
           return {
             id: node.id,
@@ -722,36 +727,32 @@ export async function getShopifyProducts(
               description: node.seo?.description || "",
             },
             rankpilotMetafields: {
-              specMatrix: specMatrixNode?.value,
-              schemaJson: schemaJsonNode?.value,
-              faqJson: faqJsonNode?.value,
-              seoScore: seoScoreNode?.value ? parseInt(seoScoreNode.value, 10) : undefined,
+              specMatrix,
+              schemaJson,
+              faqJson,
+              seoScore,
             },
-            optimizationStatus: (seoScoreNode?.value && parseInt(seoScoreNode.value, 10) >= 80)
+            optimizationStatus: (seoScore && seoScore >= 80)
               ? "OPTIMIZED"
               : "NOT_OPTIMIZED",
-            aiScore: seoScoreNode?.value ? parseInt(seoScoreNode.value, 10) : 40,
+            aiScore: seoScore || 40,
             hasRollback: false,
           };
         });
         console.log(`[getShopifyProducts] Live store sync active: Retrieved ${products.length} products directly from store ${shop}`);
       }
     } catch (e: any) {
-      console.warn("[getShopifyProducts] Primary GraphQL query failed, attempting safe fallback query:", e?.message || e);
+      console.warn("[getShopifyProducts] Primary GraphQL query notice:", e?.message || e);
       if (e?.message?.includes("403") || e?.message?.includes("Forbidden")) {
-        try {
-          clearSessionCache(shop);
-          await db.session.deleteMany({ where: { shop } });
-          console.warn(`[getShopifyProducts] 403 Forbidden detected. Purged stale session for ${shop}.`);
-        } catch {}
+        clearSessionCache(shop);
       }
     }
 
-    // Secondary fallback: if primary query failed or returned no nodes, execute streamlined safe query
+    // Secondary fallback: if primary query failed, execute streamlined safe query
     if (!isLiveStore) {
       try {
         const safeData = await executeGraphQLWithThrottling<any>(adminClient, SAFE_GET_PRODUCTS_QUERY, { first: 50 });
-        if (safeData?.data?.products?.nodes && safeData.data.products.nodes.length > 0) {
+        if (safeData?.data?.products?.nodes !== undefined) {
           isLiveStore = true;
           products = safeData.data.products.nodes.map((node: any) => ({
             id: node.id,
@@ -781,21 +782,17 @@ export async function getShopifyProducts(
           console.log(`[getShopifyProducts] Safe fallback query successful: Retrieved ${products.length} products from store ${shop}`);
         }
       } catch (safeErr: any) {
-        console.warn("[getShopifyProducts] Safe fallback query also failed:", safeErr?.message || safeErr);
+        console.warn("[getShopifyProducts] Safe fallback query notice:", safeErr?.message || safeErr);
         if (safeErr?.message?.includes("403") || safeErr?.message?.includes("Forbidden")) {
-          try {
-            clearSessionCache(shop);
-            await db.session.deleteMany({ where: { shop } });
-            console.warn(`[getShopifyProducts] 403 Forbidden detected. Purged stale session for ${shop}.`);
-          } catch {}
+          clearSessionCache(shop);
         }
       }
     }
   }
 
-  // Fallback to initial demo catalog only when disconnected / offline
-  if (!isLiveStore) {
-    console.log(`[getShopifyProducts] Offline or unauthenticated mode: using demo catalog for ${shop}`);
+  // Fallback to initial demo catalog only when disconnected / offline / standalone demo
+  if (!isLiveStore && (!adminClient || shop.includes("demo"))) {
+    console.log(`[getShopifyProducts] Offline or standalone demo mode: using demo catalog for ${shop}`);
     products = [...INITIAL_DEMO_PRODUCTS];
   }
 
@@ -1026,11 +1023,7 @@ export async function applyOptimizationToProduct({
       console.warn("[Shopify GraphQL] productUpdate error:", updErr);
       shopifyErrorMessage = updErr.message || String(updErr);
       if (updErr.message?.includes("403") || updErr.message?.includes("Forbidden")) {
-        try {
-          clearSessionCache(shop);
-          await db.session.deleteMany({ where: { shop } });
-          console.warn(`[Shopify GraphQL] 403 Forbidden detected. Purged stale session for ${shop}.`);
-        } catch {}
+        clearSessionCache(shop);
       }
     }
 

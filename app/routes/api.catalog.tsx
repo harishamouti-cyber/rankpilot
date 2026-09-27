@@ -26,7 +26,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
   }
 
-  if (authError?.includes("403") || authError?.includes("Forbidden") || url.searchParams.get("purge") === "true") {
+  if (url.searchParams.get("purge") === "true") {
     try {
       await db.session.deleteMany({ where: { shop } });
     } catch {}

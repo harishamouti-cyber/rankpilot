@@ -35,6 +35,8 @@ class PrismaSessionStorageAdapter implements SessionStorage {
       scope: session.scope,
       expires: session.expires,
       accessToken: session.accessToken || "",
+      refreshToken: session.refreshToken || null,
+      refreshTokenExpires: session.refreshTokenExpires || null,
       userId: session.onlineAccessInfo?.associated_user?.id
         ? BigInt(session.onlineAccessInfo.associated_user.id)
         : null,
@@ -78,6 +80,8 @@ class PrismaSessionStorageAdapter implements SessionStorage {
       session.scope = record.scope || undefined;
       session.expires = record.expires || undefined;
       session.accessToken = record.accessToken;
+      session.refreshToken = record.refreshToken || undefined;
+      session.refreshTokenExpires = record.refreshTokenExpires || undefined;
 
       memorySessionCache.set(session.id, session);
       return session;
@@ -124,6 +128,8 @@ class PrismaSessionStorageAdapter implements SessionStorage {
         session.scope = record.scope || undefined;
         session.expires = record.expires || undefined;
         session.accessToken = record.accessToken;
+        session.refreshToken = record.refreshToken || undefined;
+        session.refreshTokenExpires = record.refreshTokenExpires || undefined;
         memorySessionCache.set(session.id, session);
         return session;
       });
@@ -157,6 +163,7 @@ export const shopify = shopifyApp({
   distribution: AppDistribution.AppStore,
   future: {
     unstable_newEmbeddedAuthStrategy: true,
+    expiringOfflineAccessTokens: true,
   },
 });
 
