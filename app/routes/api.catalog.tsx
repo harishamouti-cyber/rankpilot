@@ -16,10 +16,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       shop = auth.session.shop;
     }
   } catch (e: any) {
-    if (e instanceof Response) {
-      throw e;
-    }
-    authError = e?.message || String(e);
+    authError = e?.message || (e instanceof Response ? `Response ${e.status}` : String(e));
     try {
       const unauth = await unauthenticated.admin(shop);
       adminClient = unauth.admin;
