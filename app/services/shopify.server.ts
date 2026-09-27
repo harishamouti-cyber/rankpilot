@@ -792,8 +792,8 @@ export async function getShopifyProducts(
         ...prod,
         title: opt.optimizedTitle || prod.title,
         seo: {
-          title: opt.optimizedTitle || prod.seo.title,
-          description: opt.optimizedMetaDesc || prod.seo.description,
+          title: opt.optimizedTitle || prod.seo?.title || prod.title,
+          description: opt.optimizedMetaDesc || prod.seo?.description || "",
         },
         optimizationStatus: opt.status as any,
         aiScore: opt.aiScore,
@@ -801,9 +801,9 @@ export async function getShopifyProducts(
         hasRollback: opt.revisions.length > 0,
         lastOptimizedAt: opt.lastOptimizedAt?.toISOString(),
         rankpilotMetafields: {
-          specMatrix: opt.specMatrixHtml || prod.rankpilotMetafields.specMatrix,
-          schemaJson: opt.schemaJson || prod.rankpilotMetafields.schemaJson,
-          faqJson: opt.faqJson || prod.rankpilotMetafields.faqJson,
+          specMatrix: opt.specMatrixHtml || prod.rankpilotMetafields?.specMatrix,
+          schemaJson: opt.schemaJson || prod.rankpilotMetafields?.schemaJson,
+          faqJson: opt.faqJson || prod.rankpilotMetafields?.faqJson,
           seoScore: opt.aiScore,
         },
       };
@@ -937,9 +937,9 @@ export async function applyOptimizationToProduct({
       shop,
       titleSnapshot: currentProduct.title,
       bodyHtmlSnapshot: currentProduct.descriptionHtml,
-      seoTitleSnapshot: currentProduct.seo.title || currentProduct.title,
-      seoDescriptionSnapshot: currentProduct.seo.description || "",
-      metafieldsSnapshot: JSON.stringify(currentProduct.rankpilotMetafields),
+      seoTitleSnapshot: currentProduct.seo?.title || currentProduct.title,
+      seoDescriptionSnapshot: currentProduct.seo?.description || "",
+      metafieldsSnapshot: JSON.stringify(currentProduct.rankpilotMetafields || {}),
       rolledBack: false,
     },
   });
@@ -963,6 +963,7 @@ export async function applyOptimizationToProduct({
   const demoItem = INITIAL_DEMO_PRODUCTS.find((p) => p.id === productId);
   if (demoItem) {
     demoItem.descriptionHtml = enhancedDescription;
+    if (!demoItem.seo) demoItem.seo = { title: "", description: "" };
     demoItem.seo.title = optimization.seoTitle;
     demoItem.seo.description = optimization.seoDescription;
     demoItem.optimizationStatus = "AI_READY";
@@ -1147,6 +1148,7 @@ export async function rollbackProduct({
   if (demoItem) {
     demoItem.title = snapshot.titleSnapshot || demoItem.title;
     demoItem.descriptionHtml = snapshot.bodyHtmlSnapshot || demoItem.descriptionHtml;
+    if (!demoItem.seo) demoItem.seo = { title: "", description: "" };
     demoItem.seo.title = snapshot.seoTitleSnapshot || snapshot.titleSnapshot || undefined;
     demoItem.seo.description = snapshot.seoDescriptionSnapshot || "";
     demoItem.optimizationStatus = "NEEDS_OPTIMIZATION";

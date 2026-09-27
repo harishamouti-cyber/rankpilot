@@ -467,13 +467,13 @@ export default function AppDashboard() {
         if (p.id === productId) {
           saveStoredOptimization(shop, productId, {
             seoTitle: newTitle,
-            seoDescription: p.seo.description,
+            seoDescription: p.seo?.description || "",
             aiScore: 98,
           });
           return {
             ...p,
             title: newTitle,
-            seo: { ...p.seo, title: newTitle },
+            seo: { title: newTitle, description: p.seo?.description || "" },
             optimizationStatus: "AI_READY",
             aiScore: 98,
             geoScore: 98,
@@ -597,17 +597,17 @@ export default function AppDashboard() {
     if (isProdOptimized(product) && product.rankpilotMetafields?.specMatrix) {
       let parsedFaq = [];
       try {
-        parsedFaq = product.rankpilotMetafields.faqJson ? JSON.parse(product.rankpilotMetafields.faqJson) : [];
+        parsedFaq = product.rankpilotMetafields?.faqJson ? JSON.parse(product.rankpilotMetafields.faqJson) : [];
       } catch {}
       let parsedSchema = {};
       try {
-        parsedSchema = product.rankpilotMetafields.schemaJson ? JSON.parse(product.rankpilotMetafields.schemaJson) : {};
+        parsedSchema = product.rankpilotMetafields?.schemaJson ? JSON.parse(product.rankpilotMetafields.schemaJson) : {};
       } catch {}
 
       setCurrentOptimization({
-        seoTitle: product.seo.title || product.title,
-        seoDescription: product.seo.description || "",
-        specMatrixHtml: product.rankpilotMetafields.specMatrix,
+        seoTitle: product.seo?.title || product.title,
+        seoDescription: product.seo?.description || "",
+        specMatrixHtml: product.rankpilotMetafields?.specMatrix,
         faqList: parsedFaq.length >= 3 ? parsedFaq : [
           { question: `Is ${product.title} covered by a warranty?`, answer: "Yes, covered by a 1-year manufacturer warranty." },
           { question: `How does ${product.title} compare to alternatives?`, answer: "Engineered with higher-grade materials and reinforced construction." },

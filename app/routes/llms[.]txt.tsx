@@ -38,11 +38,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     markdownLines.push(`- **Vendor**: ${product.vendor}`);
     markdownLines.push(`- **Category**: ${product.productType}`);
     markdownLines.push(`- **Tags**: ${product.tags.join(", ")}`);
-    markdownLines.push(`- **SEO Title**: ${product.seo.title || product.title}`);
-    markdownLines.push(`- **Meta Description**: ${product.seo.description || cleanDesc.slice(0, 150)}`);
+    markdownLines.push(`- **SEO Title**: ${product.seo?.title || product.title}`);
+    markdownLines.push(`- **Meta Description**: ${product.seo?.description || cleanDesc.slice(0, 150)}`);
     markdownLines.push(`- **Description Summary**: ${cleanDesc}`);
 
-    if (product.rankpilotMetafields.faqJson) {
+    if (product.rankpilotMetafields?.faqJson) {
       try {
         const faqs = JSON.parse(product.rankpilotMetafields.faqJson);
         if (Array.isArray(faqs) && faqs.length > 0) {

@@ -46,7 +46,7 @@ export function OptimizationModal({
   const baselineScore = isOptimized ? (product.geoScore || product.aiScore || 96) : 38;
   const projectedScore = optimization.aiScore || 96;
 
-  const beforeTitle = product.seo.title || product.title;
+  const beforeTitle = product.seo?.title || product.title;
 
   // Extract clean text from description without mid-sentence truncation
   const getNaturalDescription = (html: string, fallbackTitle: string): string => {
@@ -66,7 +66,7 @@ export function OptimizationModal({
   };
 
   const beforeDesc =
-    product.seo.description?.trim() ||
+    product.seo?.description?.trim() ||
     getNaturalDescription(product.descriptionHtml, beforeTitle);
 
   // Render highlighted meta description with subtle keyword tags
