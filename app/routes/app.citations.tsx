@@ -18,16 +18,24 @@ import {
 } from "@shopify/polaris";
 import { ArrowLeftIcon, SearchIcon, RefreshIcon } from "@shopify/polaris-icons";
 import { getCitationMetrics, CitationItem } from "~/services/citation.server";
+import { authenticate } from "~/shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
-  const shop = url.searchParams.get("shop") || "demo.myshopify.com";
+  let shop = url.searchParams.get("shop") || "demo.myshopify.com";
+  try {
+    const auth = await authenticate.admin(request);
+    if (auth.session?.shop) {
+      shop = auth.session.shop;
+    }
+  } catch {}
+
   const metrics = await getCitationMetrics(shop);
   return json({ shop, metrics });
 };
 
 export default function CitationsPage() {
-  const { metrics } = useLoaderData<typeof loader>();
+  const { shop, metrics } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
   const revalidator = useRevalidator();
 
@@ -125,7 +133,7 @@ export default function CitationsPage() {
       }
       backAction={{
         content: "Back to Dashboard",
-        onAction: () => navigate("/app"),
+        onAction: () => navigate(`/app?shop=${encodeURIComponent(shop)}`),
       }}
       primaryAction={{
         content: "Run Live AI Engine Audit",

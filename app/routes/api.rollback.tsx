@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { rollbackProduct } from "~/services/shopify.server";
+import { authenticate, unauthenticated } from "~/shopify.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   if (request.method !== "POST") {
@@ -15,7 +16,25 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ error: "productId is required" }, { status: 400 });
     }
 
-    const result = await rollbackProduct({ productId, shop });
+    let adminClient: any = null;
+    let effectiveShop = shop;
+
+    try {
+      const auth = await authenticate.admin(request);
+      adminClient = auth.admin;
+      if (auth.session?.shop) {
+        effectiveShop = auth.session.shop;
+      }
+    } catch {
+      try {
+        const unauth = await unauthenticated.admin(shop);
+        adminClient = unauth.admin;
+      } catch {
+        // Fallback for standalone demo
+      }
+    }
+
+    const result = await rollbackProduct({ productId, shop: effectiveShop, adminClient });
     return json({ success: true, result });
   } catch (error: any) {
     const isNotFound = error.message?.includes("No previous revision snapshot");

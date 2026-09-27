@@ -20,9 +20,10 @@ export interface AutopilotScanResult {
  * 4. Records actions in AutopilotLog.
  */
 export async function runAutopilotScan(
-  shop: string = "demo.myshopify.com"
+  shop: string = "demo.myshopify.com",
+  adminClient?: any
 ): Promise<AutopilotScanResult> {
-  const products = await getShopifyProducts(shop);
+  const products = await getShopifyProducts(shop, adminClient);
   const setting = await db.appSetting.findUnique({ where: { shop } });
   const domain = setting?.storeDomain || "demo.myshopify.com";
 
@@ -93,6 +94,7 @@ export async function runAutopilotScan(
           shop,
           currentProduct: product,
           optimization,
+          adminClient,
         });
 
         autoOptimizedCount++;

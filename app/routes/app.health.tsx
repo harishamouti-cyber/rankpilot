@@ -30,12 +30,15 @@ import { db } from "~/db.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
-  const shop = url.searchParams.get("shop") || "demo.myshopify.com";
+  let shop = url.searchParams.get("shop") || "demo.myshopify.com";
 
   let adminClient: any = null;
   try {
     const authResult = await authenticate.admin(request);
     adminClient = authResult.admin;
+    if (authResult.session?.shop) {
+      shop = authResult.session.shop;
+    }
   } catch {
     // Offline mode
   }
@@ -163,7 +166,7 @@ export default function SystemHealthRoute() {
       compactTitle
       backAction={{
         content: "Dashboard",
-        onAction: () => navigate("/app"),
+        onAction: () => navigate(`/app?shop=${encodeURIComponent(shop)}`),
       }}
       primaryAction={{
         content: "Re-sync Metafield Definitions & Self-Heal",

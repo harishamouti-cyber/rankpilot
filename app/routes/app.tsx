@@ -11,11 +11,14 @@ export const headers: HeadersFunction = ({ parentHeaders }) => {
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const apiKey = process.env.SHOPIFY_API_KEY || "rankpilot_dev_key";
+  const apiKey = process.env.SHOPIFY_API_KEY || "82464865c45f23d73b21b486de6ace7a";
   try {
     const { session } = await authenticate.admin(request);
     return json({ apiKey, shop: session.shop, isEmbedded: true });
-  } catch {
+  } catch (error) {
+    if (error instanceof Response) {
+      throw error;
+    }
     const url = new URL(request.url);
     const shop = url.searchParams.get("shop") || "demo.myshopify.com";
     return json({ apiKey, shop, isEmbedded: false });

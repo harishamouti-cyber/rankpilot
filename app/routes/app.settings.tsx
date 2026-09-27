@@ -26,17 +26,24 @@ import {
   ArrowLeftIcon,
 } from "@shopify/polaris-icons";
 import { db } from "~/db.server";
+import { authenticate } from "~/shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
-  const shop = url.searchParams.get("shop") || "demo.myshopify.com";
+  let shop = url.searchParams.get("shop") || "demo.myshopify.com";
+  try {
+    const auth = await authenticate.admin(request);
+    if (auth.session?.shop) {
+      shop = auth.session.shop;
+    }
+  } catch {}
 
   let setting = await db.appSetting.findUnique({ where: { shop } });
   if (!setting) {
     setting = await db.appSetting.create({
       data: {
         shop,
-        storeDomain: "demo.myshopify.com",
+        storeDomain: shop || "demo.myshopify.com",
         autoPingIndexNow: true,
         autopilotEnabled: true,
         indexNowKey: "rankpilot-demo-indexnow-key-2025",
@@ -117,7 +124,7 @@ export default function SettingsRoute() {
       compactTitle
       backAction={{
         content: "Dashboard",
-        onAction: () => navigate("/app"),
+        onAction: () => navigate(`/app?shop=${encodeURIComponent(shop)}`),
       }}
       primaryAction={{
         content: "Save Preferences",

@@ -290,6 +290,42 @@ mutation productSet($input: ProductSetInput!) {
 }
 `;
 
+export const PRODUCT_UPDATE_MUTATION = `#graphql
+mutation productUpdate($input: ProductInput!) {
+  productUpdate(input: $input) {
+    product {
+      id
+      title
+      seo {
+        title
+        description
+      }
+    }
+    userErrors {
+      field
+      message
+    }
+  }
+}
+`;
+
+export const METAFIELDS_SET_MUTATION = `#graphql
+mutation metafieldsSet($metafields: [MetafieldsSetInput!]!) {
+  metafieldsSet(metafields: $metafields) {
+    metafields {
+      id
+      namespace
+      key
+      value
+    }
+    userErrors {
+      field
+      message
+    }
+  }
+}
+`;
+
 export interface GraphQLThrottleStatus {
   maximumAvailable: number;
   currentlyAvailable: number;
@@ -462,13 +498,15 @@ export async function getShopifyProducts(
     storedOptimizations.map((item) => [item.productId, item])
   );
 
-  let products = [...INITIAL_DEMO_PRODUCTS];
+  let products: ShopifyProductItem[] = [];
+  let isLiveStore = false;
 
   // If live adminClient is provided, query Shopify GraphQL with automated rate-limiting
   if (adminClient && typeof adminClient.graphql === "function") {
     try {
       const data = await executeGraphQLWithThrottling<any>(adminClient, GET_PRODUCTS_QUERY, { first: 50 });
       if (data?.data?.products?.nodes) {
+        isLiveStore = true;
         products = data.data.products.nodes.map((node: any) => {
           const specMatrixNode = node.metafields?.nodes?.find(
             (m: any) => m.key === "spec_matrix"
@@ -520,6 +558,11 @@ export async function getShopifyProducts(
     } catch (e) {
       console.warn("Shopify GraphQL fetch failed, using local catalog:", e);
     }
+  }
+
+  // Fallback to initial demo catalog only when disconnected / offline
+  if (!isLiveStore) {
+    products = [...INITIAL_DEMO_PRODUCTS];
   }
 
   // Merge with local SQLite optimization status
@@ -646,35 +689,60 @@ export async function applyOptimizationToProduct({
     };
   }
 
-  // 2. Modern Shopify GraphQL productSet mutation
+  // 2. Modern Shopify GraphQL sync
   if (adminClient && typeof adminClient.graphql === "function") {
+    // 2a. Update SEO Title & Description
+    try {
+      const updateRes = await executeGraphQLWithThrottling(adminClient, PRODUCT_UPDATE_MUTATION, {
+        input: {
+          id: productId,
+          seo: {
+            title: optimization.seoTitle,
+            description: optimization.seoDescription,
+          },
+        },
+      });
+      const updateErrors = updateRes.data?.productUpdate?.userErrors;
+      if (updateErrors && updateErrors.length > 0) {
+        console.warn("[Shopify GraphQL] productUpdate userErrors:", updateErrors);
+      }
+    } catch (updErr) {
+      console.warn("[Shopify GraphQL] productUpdate error:", updErr);
+    }
+
+    // 2b. Set Metafields via metafieldsSet
     try {
       const metafields = [
         {
+          ownerId: productId,
           namespace: "rankpilot",
           key: "spec_matrix",
           type: "multi_line_text_field",
           value: optimization.specMatrixHtml,
         },
         {
+          ownerId: productId,
           namespace: "rankpilot",
           key: "spec_table",
           type: "multi_line_text_field",
           value: optimization.specMatrixHtml,
         },
         {
+          ownerId: productId,
           namespace: "rankpilot",
           key: "schema_json",
           type: "json",
           value: JSON.stringify(optimization.schemaJson),
         },
         {
+          ownerId: productId,
           namespace: "rankpilot",
           key: "faq_json",
           type: "json",
           value: JSON.stringify(optimization.faqList),
         },
         {
+          ownerId: productId,
           namespace: "rankpilot",
           key: "seo_score",
           type: "number_integer",
@@ -682,24 +750,51 @@ export async function applyOptimizationToProduct({
         },
       ];
 
-      const input = {
-        id: productId,
-        seo: {
-          title: optimization.seoTitle,
-          description: optimization.seoDescription,
-        },
-        metafields,
-      };
-
-      const res = await executeGraphQLWithThrottling(adminClient, PRODUCT_SET_MUTATION, { input });
-      const userErrors = res.data?.productSet?.userErrors;
-      if (userErrors && userErrors.length > 0) {
-        console.warn(
-          `[Shopify GraphQL] productSet returned userErrors: ${userErrors.map((u: any) => u.message).join(", ")}`
-        );
+      const metaRes = await executeGraphQLWithThrottling(adminClient, METAFIELDS_SET_MUTATION, { metafields });
+      const metaErrors = metaRes.data?.metafieldsSet?.userErrors;
+      if (metaErrors && metaErrors.length > 0) {
+        console.warn("[Shopify GraphQL] metafieldsSet userErrors:", metaErrors);
       }
-    } catch (e) {
-      console.warn("GraphQL productSet mutation error:", e);
+    } catch (metaErr) {
+      console.warn("[Shopify GraphQL] metafieldsSet error, trying productSet fallback:", metaErr);
+      try {
+        const input = {
+          id: productId,
+          seo: {
+            title: optimization.seoTitle,
+            description: optimization.seoDescription,
+          },
+          metafields: [
+            {
+              namespace: "rankpilot",
+              key: "spec_matrix",
+              type: "multi_line_text_field",
+              value: optimization.specMatrixHtml,
+            },
+            {
+              namespace: "rankpilot",
+              key: "schema_json",
+              type: "json",
+              value: JSON.stringify(optimization.schemaJson),
+            },
+            {
+              namespace: "rankpilot",
+              key: "faq_json",
+              type: "json",
+              value: JSON.stringify(optimization.faqList),
+            },
+            {
+              namespace: "rankpilot",
+              key: "seo_score",
+              type: "number_integer",
+              value: optimization.aiScore.toString(),
+            },
+          ],
+        };
+        await executeGraphQLWithThrottling(adminClient, PRODUCT_SET_MUTATION, { input });
+      } catch (fallbackErr) {
+        console.warn("[Shopify GraphQL] productSet fallback error:", fallbackErr);
+      }
     }
   }
 
@@ -769,33 +864,58 @@ export async function rollbackProduct({
     demoItem.rankpilotMetafields = {};
   }
 
-  // Restore via productSet mutation with rate-limiting protection if connected
+  // Restore via Shopify GraphQL if connected
   if (adminClient && typeof adminClient.graphql === "function") {
+    // Revert SEO title & description
     try {
-      const input = {
-        id: productId,
-        seo: {
-          title: snapshot.seoTitleSnapshot || snapshot.titleSnapshot,
-          description: snapshot.seoDescriptionSnapshot || "",
+      await executeGraphQLWithThrottling(adminClient, PRODUCT_UPDATE_MUTATION, {
+        input: {
+          id: productId,
+          seo: {
+            title: snapshot.seoTitleSnapshot || snapshot.titleSnapshot,
+            description: snapshot.seoDescriptionSnapshot || "",
+          },
         },
+      });
+    } catch (updErr) {
+      console.warn("[Shopify GraphQL Rollback] productUpdate notice:", updErr);
+    }
+
+    // Reset SEO score metafield
+    try {
+      await executeGraphQLWithThrottling(adminClient, METAFIELDS_SET_MUTATION, {
         metafields: [
           {
+            ownerId: productId,
             namespace: "rankpilot",
             key: "seo_score",
             type: "number_integer",
             value: "38",
           },
         ],
-      };
-      const res = await executeGraphQLWithThrottling(adminClient, PRODUCT_SET_MUTATION, { input });
-      const userErrors = res.data?.productSet?.userErrors;
-      if (userErrors && userErrors.length > 0) {
-        console.warn(
-          `[Shopify GraphQL Rollback] productSet returned userErrors: ${userErrors.map((u: any) => u.message).join(", ")}`
-        );
+      });
+    } catch (metaErr) {
+      console.warn("[Shopify GraphQL Rollback] metafieldsSet notice, fallback to productSet:", metaErr);
+      try {
+        const input = {
+          id: productId,
+          seo: {
+            title: snapshot.seoTitleSnapshot || snapshot.titleSnapshot,
+            description: snapshot.seoDescriptionSnapshot || "",
+          },
+          metafields: [
+            {
+              namespace: "rankpilot",
+              key: "seo_score",
+              type: "number_integer",
+              value: "38",
+            },
+          ],
+        };
+        await executeGraphQLWithThrottling(adminClient, PRODUCT_SET_MUTATION, { input });
+      } catch (fallbackErr) {
+        console.warn("[Shopify GraphQL Rollback] productSet fallback notice:", fallbackErr);
       }
-    } catch (e) {
-      console.warn("GraphQL rollback error:", e);
     }
   }
 

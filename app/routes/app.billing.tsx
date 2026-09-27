@@ -14,11 +14,19 @@ import {
   Divider,
 } from "@shopify/polaris";
 import { CheckIcon } from "@shopify/polaris-icons";
-import { getCurrentPlan, confirmShopPlan, PLANS, PlanDefinition } from "~/services/billing.server";
+import { getCurrentPlan, confirmShopPlan, PLANS, PlanDefinition, PlanId } from "~/services/billing.server";
+import { authenticate } from "~/shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
-  const shop = url.searchParams.get("shop") || "demo.myshopify.com";
+  let shop = url.searchParams.get("shop") || "demo.myshopify.com";
+  try {
+    const auth = await authenticate.admin(request);
+    if (auth.session?.shop) {
+      shop = auth.session.shop;
+    }
+  } catch {}
+
   const confirmed = url.searchParams.get("confirmed");
   const planParam = url.searchParams.get("plan");
   const chargeId = url.searchParams.get("charge_id");
@@ -89,7 +97,7 @@ export default function BillingPage() {
       subtitle="Select the plan that matches your catalog size and generative search requirements."
       backAction={{
         content: "Back to Dashboard",
-        onAction: () => navigate("/app"),
+        onAction: () => navigate(`/app?shop=${encodeURIComponent(shop)}`),
       }}
     >
       <BlockStack gap="500">

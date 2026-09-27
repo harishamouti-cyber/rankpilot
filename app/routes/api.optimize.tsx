@@ -1,8 +1,9 @@
 import type { ActionFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { getShopifyProducts } from "~/services/shopify.server";
+import { getShopifyProducts, ShopifyProductItem } from "~/services/shopify.server";
 import { optimizeProductWithAI } from "~/services/gemini.server";
 import { extractCompetitorData } from "~/services/competitor.server";
+import { authenticate, unauthenticated } from "~/shopify.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   if (request.method !== "POST") {
@@ -11,17 +12,39 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   try {
     const body = await request.json();
-    const { productId, shop = "demo.myshopify.com", competitorUrl } = body;
+    const { productId, shop = "demo.myshopify.com", competitorUrl, product: clientProduct } = body;
 
     if (!productId) {
       return json({ error: "productId is required" }, { status: 400 });
     }
 
-    const products = await getShopifyProducts(shop);
-    const product = products.find((p) => p.id === productId);
+    let adminClient: any = null;
+    let effectiveShop = shop;
+
+    try {
+      const auth = await authenticate.admin(request);
+      adminClient = auth.admin;
+      if (auth.session?.shop) {
+        effectiveShop = auth.session.shop;
+      }
+    } catch {
+      try {
+        const unauth = await unauthenticated.admin(shop);
+        adminClient = unauth.admin;
+      } catch {
+        // Fallback for standalone demo
+      }
+    }
+
+    let product: ShopifyProductItem | undefined = clientProduct;
 
     if (!product) {
-      return json({ error: "Product not found" }, { status: 404 });
+      const products = await getShopifyProducts(effectiveShop, adminClient);
+      product = products.find((p) => p.id === productId);
+    }
+
+    if (!product) {
+      return json({ error: `Product ${productId} not found in store catalog` }, { status: 404 });
     }
 
     let competitorData;
@@ -36,12 +59,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const optimization = await optimizeProductWithAI(
       {
         title: product.title,
-        descriptionHtml: product.descriptionHtml,
-        vendor: product.vendor,
-        productType: product.productType,
-        tags: product.tags,
-        price: product.priceRange.minVariantPrice.amount,
-        currency: product.priceRange.minVariantPrice.currencyCode,
+        descriptionHtml: product.descriptionHtml || "",
+        vendor: product.vendor || "",
+        productType: product.productType || "",
+        tags: product.tags || [],
+        price: product.priceRange?.minVariantPrice?.amount || "0.00",
+        currency: product.priceRange?.minVariantPrice?.currencyCode || "USD",
         handle: product.handle,
         competitorData: competitorData
           ? {
@@ -52,7 +75,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             }
           : undefined,
       },
-      shop
+      effectiveShop
     );
 
     return json({

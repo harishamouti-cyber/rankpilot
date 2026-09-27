@@ -57,13 +57,33 @@ import { WelcomeModal } from "~/components/WelcomeModal";
 import { SetupGuide } from "~/components/SetupGuide";
 import { StrikingQueriesModal } from "~/components/StrikingQueriesModal";
 import { PerformanceDigestModal } from "~/components/PerformanceDigestModal";
+import { authenticate, unauthenticated } from "~/shopify.server";
 import { db } from "~/db.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
-  const shop = url.searchParams.get("shop") || "demo.myshopify.com";
+  let shop = url.searchParams.get("shop") || "demo.myshopify.com";
+  let adminClient: any = null;
 
-  const products = await getShopifyProducts(shop);
+  try {
+    const authResult = await authenticate.admin(request);
+    adminClient = authResult.admin;
+    if (authResult.session?.shop) {
+      shop = authResult.session.shop;
+    }
+  } catch (error) {
+    if (error instanceof Response) {
+      throw error;
+    }
+    try {
+      const unauthResult = await unauthenticated.admin(shop);
+      adminClient = unauthResult.admin;
+    } catch (unauthErr) {
+      console.warn("[App Dashboard Loader] Could not obtain admin client:", unauthErr);
+    }
+  }
+
+  const products = await getShopifyProducts(shop, adminClient);
 
   const totalProducts = products.length;
   const isOptimized = (status: string) => status === "OPTIMIZED" || status === "AI_READY";
@@ -102,7 +122,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           croPostOptConv: rawDigest.croPostOptConv,
         }
       : null;
-    driftAudit = await auditCatalogForDrift(shop);
+    driftAudit = await auditCatalogForDrift(shop, adminClient);
   } catch (dbErr) {
     console.warn("[App Dashboard Loader] Database query notice:", dbErr);
   }
@@ -128,7 +148,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       geminiApiKey: setting?.geminiApiKey || "",
       indexNowKey: setting?.indexNowKey || "rankpilot-demo-indexnow-key-2025",
       autoPingIndexNow: setting?.autoPingIndexNow ?? true,
-      storeDomain: setting?.storeDomain || "demo.myshopify.com",
+      storeDomain: setting?.storeDomain || shop || "demo.myshopify.com",
       isOnboarded: setting?.isOnboarded ?? false,
     },
   });
@@ -406,6 +426,7 @@ export default function AppDashboard() {
           productId: product.id,
           shop,
           competitorUrl,
+          product,
         }),
       });
       const data = await res.json();
@@ -438,6 +459,7 @@ export default function AppDashboard() {
           productId: product.id,
           shop,
           optimization,
+          currentProduct: product,
         }),
       });
       const data = await res.json();
@@ -612,7 +634,7 @@ export default function AppDashboard() {
           const optRes = await fetch("/api/optimize", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ productId: prod.id, shop }),
+            body: JSON.stringify({ productId: prod.id, shop, product: prod }),
           });
           const optData = await optRes.json();
           if (optData.optimization) {
@@ -623,6 +645,7 @@ export default function AppDashboard() {
                 productId: prod.id,
                 shop,
                 optimization: optData.optimization,
+                currentProduct: prod,
               }),
             });
           }
@@ -895,7 +918,7 @@ export default function AppDashboard() {
               loading={isOptimizing && selectedProduct?.id === product.id}
               onClick={() => handleOpenOptimizationOrOptimize(product)}
             >
-              View Diff
+              {isProdOptimized(product) ? "View Diff" : "Optimize"}
             </Button>
 
             <Popover
@@ -1014,27 +1037,27 @@ export default function AppDashboard() {
             {
               content: "Reverse AI Citations",
               icon: ChartLineIcon,
-              onAction: () => navigate("/app/citations"),
+              onAction: () => navigate(`/app/citations?shop=${encodeURIComponent(shop)}`),
             },
             {
               content: "Export llms.txt",
               icon: ExportIcon,
-              onAction: () => window.open("/llms.txt", "_blank"),
+              onAction: () => window.open(`/llms.txt?shop=${encodeURIComponent(shop)}`, "_blank"),
             },
             {
               content: "Subscription & Billing",
               icon: CreditCardIcon,
-              onAction: () => navigate("/app/billing"),
+              onAction: () => navigate(`/app/billing?shop=${encodeURIComponent(shop)}`),
             },
             {
               content: "System Health & Diagnostics",
               icon: ShieldCheckMarkIcon,
-              onAction: () => navigate("/app/health"),
+              onAction: () => navigate(`/app/health?shop=${encodeURIComponent(shop)}`),
             },
             {
               content: "Settings & Retention",
               icon: SettingsIcon,
-              onAction: () => navigate("/app/settings"),
+              onAction: () => navigate(`/app/settings?shop=${encodeURIComponent(shop)}`),
             },
           ],
         },
@@ -1048,7 +1071,7 @@ export default function AppDashboard() {
             tone="warning"
             action={{
               content: "View Health Terminal & Self-Heal",
-              onAction: () => navigate("/app/health"),
+              onAction: () => navigate(`/app/health?shop=${encodeURIComponent(shop)}`),
             }}
           >
             <Text as="p" variant="bodyMd">
