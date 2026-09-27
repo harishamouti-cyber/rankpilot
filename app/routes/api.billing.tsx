@@ -41,14 +41,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ success: true, result });
     }
 
+    const normalizedPlanId = (planId || "").toUpperCase() as PlanId;
     // Default: create subscription via GraphQL / checkout confirmationUrl
-    if (!planId || !["STARTER", "PRO", "SCALE"].includes(planId)) {
+    if (!normalizedPlanId || !["STARTER", "PRO", "SCALE"].includes(normalizedPlanId)) {
       return json({ error: "Valid planId (STARTER, PRO, SCALE) is required" }, { status: 400 });
     }
 
     const subscription = await createAppSubscription({
       shop,
-      planId: planId as PlanId,
+      planId: normalizedPlanId,
       returnUrl,
     });
 

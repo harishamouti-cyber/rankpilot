@@ -23,8 +23,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const planParam = url.searchParams.get("plan");
   const chargeId = url.searchParams.get("charge_id");
 
-  if (confirmed === "true" && planParam && ["STARTER", "PRO", "SCALE"].includes(planParam)) {
-    await confirmShopPlan(shop, planParam as any, chargeId || undefined);
+  const upperPlan = planParam?.toUpperCase() as PlanId | undefined;
+  if (confirmed === "true" && upperPlan && ["STARTER", "PRO", "SCALE"].includes(upperPlan)) {
+    await confirmShopPlan(shop, upperPlan, chargeId || undefined);
   }
 
   const currentPlan = await getCurrentPlan(shop);
