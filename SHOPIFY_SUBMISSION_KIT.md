@@ -46,7 +46,7 @@ Fill in each field using the pre-written values below:
 - **App Name:** `RankPilot`
 - **App Subtitle (Max 61 chars):**
   ```text
-  AI SEO, GEO & AI Search Overviews
+  Optimize your catalog for AI search and Google Overviews
   ```
 - **App Introduction / Tagline (Max 100 chars):**
   ```text
@@ -80,7 +80,7 @@ Fill in each field using the pre-written values below:
 - **Feature Title:** `AI Spec Matrices & Conversational Buyer FAQs`
 - **Feature Description:**
   ```text
-  Generates high-density technical comparison tables, rich schema.org JSON-LD markup, and native Theme App Extension blocks with zero third-party JavaScript penalties.
+  Generates high-density technical comparison tables, rich Schema JSON-LD markup, and native Theme App Extension blocks with zero third-party JavaScript penalties.
   ```
 
 #### Feature 3:
@@ -99,7 +99,7 @@ Copy and paste the following formatted text into the **Detailed Description** bo
 ```markdown
 ### Future-Proof Your Shopify Store for the Era of AI Search & Google AI Overviews
 
-Search engines have evolved. Shoppers are no longer just browsing blue links—they are asking conversational questions to **Google AI Overviews, ChatGPT Search, Perplexity, and Claude**. If your product catalog lacks semantic entity grounding, verified specifications, and structured Schema.org JSON-LD, your products remain completely invisible to generative AI answer engines.
+Search engines have evolved. Shoppers are no longer just browsing blue links—they are asking conversational questions to **Google AI Overviews, ChatGPT Search, Perplexity, and Claude**. If your product catalog lacks semantic entity grounding, verified specifications, and structured Schema JSON-LD, your products remain completely invisible to generative AI answer engines.
 
 **RankPilot** is the category-defining Generative Engine Optimization (GEO) platform built exclusively for modern Shopify merchants.
 
@@ -149,7 +149,7 @@ Configure 3 recurring monthly subscription tiers:
 - **Free Trial:** `None`
 - **Included Features:**
   - Up to 250 Catalog SKUs
-  - Automatic Schema.org JSON-LD Markup
+  - Automatic Schema JSON-LD Markup
   - Daily IndexNow Search Engine Sync
   - Basic SEO Title & Meta Descriptions
   - Standard E-Commerce Support
