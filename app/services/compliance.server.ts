@@ -5,14 +5,27 @@ import { db } from "~/db.server";
  * Validates Shopify Webhook HMAC header manually when needed.
  */
 export function verifyShopifyWebhookHmac(rawBody: string, hmacHeader: string | null): boolean {
-  if (!hmacHeader) return true; // allow in dev/test simulation
-  const secret = process.env.SHOPIFY_API_SECRET || "rankpilot_dev_secret";
-  const digest = crypto
-    .createHmac("sha256", secret)
-    .update(rawBody, "utf8")
-    .digest("base64");
+  if (!hmacHeader) return false;
+  const secret = process.env.SHOPIFY_API_SECRET;
+  if (!secret) return false;
 
-  return crypto.timingSafeEqual(Buffer.from(digest), Buffer.from(hmacHeader));
+  try {
+    const digest = crypto
+      .createHmac("sha256", secret)
+      .update(rawBody, "utf8")
+      .digest("base64");
+
+    const digestBuf = Buffer.from(digest);
+    const hmacBuf = Buffer.from(hmacHeader);
+
+    if (digestBuf.length !== hmacBuf.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(digestBuf, hmacBuf);
+  } catch {
+    return false;
+  }
 }
 
 /**

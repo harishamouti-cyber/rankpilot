@@ -17,6 +17,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return new Response("Method Not Allowed", { status: 405 });
   }
 
+  const hmac = request.headers.get("X-Shopify-Hmac-Sha256");
+  if (!hmac) {
+    return new Response("Unauthorized: Missing HMAC signature", { status: 401 });
+  }
+
   try {
     let shop = "demo.myshopify.com";
     let admin: any = null;
@@ -28,12 +33,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       shop = authResult.shop;
       payload = authResult.payload;
       admin = authResult.admin;
-    } catch (error: any) {
+    } catch (authError: any) {
+      if (authError instanceof Response && authError.status === 401) {
+        throw authError;
+      }
       const rawBody = await fallbackReq.text();
-      const hmac = fallbackReq.headers.get("X-Shopify-Hmac-Sha256");
       if (!verifyShopifyWebhookHmac(rawBody, hmac)) {
-        console.warn("[Webhook products/create] HMAC failed, responding 200 to prevent retry storms");
-        return new Response(null, { status: 200 });
+        return new Response("Unauthorized: Invalid HMAC signature", { status: 401 });
       }
       payload = rawBody ? JSON.parse(rawBody) : {};
       shop =
