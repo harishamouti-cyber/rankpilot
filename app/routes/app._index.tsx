@@ -157,14 +157,23 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 async function appFetch(url: string, options: RequestInit = {}) {
   const headers = new Headers(options.headers || {});
   try {
-    if (typeof window !== "undefined" && (window as any).shopify?.idToken) {
-      const token = await (window as any).shopify.idToken();
-      if (token && !headers.has("Authorization")) {
-        headers.set("Authorization", `Bearer ${token}`);
+    if (typeof window !== "undefined") {
+      for (let attempt = 0; attempt < 8; attempt++) {
+        const s = (window as any).shopify;
+        if (s && typeof s.idToken === "function") {
+          try {
+            const token = await s.idToken();
+            if (token) {
+              headers.set("Authorization", `Bearer ${token}`);
+              break;
+            }
+          } catch {}
+        }
+        await new Promise((r) => setTimeout(r, 150));
       }
     }
   } catch (e) {
-    console.warn("[appFetch] Could not get App Bridge idToken:", e);
+    console.warn("[appFetch] Error getting App Bridge idToken:", e);
   }
   return fetch(url, { ...options, headers });
 }
@@ -183,16 +192,6 @@ export default function AppDashboard() {
   const revalidator = useRevalidator();
   const navigate = useNavigate();
 
-  // Client-Side App Bridge Live Store Catalog Fetcher
-  const catalogFetcher = useFetcher<{
-    success: boolean;
-    shop: string;
-    isLive: boolean;
-    products: ShopifyProductItem[];
-    totalProducts: number;
-    authError?: string | null;
-  }>();
-
   // Local state
   const [products, setProducts] = useState<ShopifyProductItem[]>(initialProducts);
   const [metrics, setMetrics] = useState(initialMetrics);
@@ -200,36 +199,45 @@ export default function AppDashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 25;
   const [isPending, startTransition] = useTransition();
+  const [isSyncingStore, setIsSyncingStore] = useState(false);
 
   const isProdOptimized = (p: ShopifyProductItem) =>
     p.optimizationStatus === "OPTIMIZED" || p.optimizationStatus === "AI_READY";
 
-  // Automatic client-side catalog sync on mount using App Bridge token exchange
-  useEffect(() => {
-    if (shop) {
-      catalogFetcher.load(`/api/catalog?shop=${encodeURIComponent(shop)}`);
+  // Direct token-authenticated live catalog sync using App Bridge Bearer token
+  const syncStoreCatalog = useCallback(async () => {
+    setIsSyncingStore(true);
+    try {
+      const res = await appFetch(`/api/catalog?shop=${encodeURIComponent(shop)}&t=${Date.now()}`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.products) && data.products.length > 0) {
+        setProducts(data.products);
+        const isOptimized = (status: string) => status === "OPTIMIZED" || status === "AI_READY";
+        const aiReadyCount = data.products.filter((p: any) => isOptimized(p.optimizationStatus)).length;
+        setMetrics((prev) => ({
+          ...prev,
+          totalProducts: data.products.length,
+          aiReadyCount,
+          aiReadyPercentage: data.products.length > 0 ? Math.round((aiReadyCount / data.products.length) * 100) : 0,
+        }));
+        if (data.isLive) {
+          setToastTone("success");
+          setToastMessage(`✓ Synced ${data.products.length} live products directly from your Shopify store!`);
+        }
+      }
+    } catch (err: any) {
+      console.warn("[syncStoreCatalog] Sync error:", err);
+    } finally {
+      setIsSyncingStore(false);
     }
   }, [shop]);
 
-  // Synchronize state when real store catalog is loaded
+  // Automatic client-side catalog sync on mount using App Bridge token exchange
   useEffect(() => {
-    if (catalogFetcher.data?.success && Array.isArray(catalogFetcher.data.products) && catalogFetcher.data.products.length > 0) {
-      const liveProds = catalogFetcher.data.products;
-      setProducts(liveProds);
-      const isOptimized = (status: string) => status === "OPTIMIZED" || status === "AI_READY";
-      const aiReadyCount = liveProds.filter((p) => isOptimized(p.optimizationStatus)).length;
-      setMetrics((prev) => ({
-        ...prev,
-        totalProducts: liveProds.length,
-        aiReadyCount,
-        aiReadyPercentage: liveProds.length > 0 ? Math.round((aiReadyCount / liveProds.length) * 100) : 0,
-      }));
-      if (catalogFetcher.data.isLive) {
-        setToastTone("success");
-        setToastMessage(`✓ Connected to live store catalog (${liveProds.length} products synced).`);
-      }
+    if (shop) {
+      syncStoreCatalog();
     }
-  }, [catalogFetcher.data]);
+  }, [shop, syncStoreCatalog]);
 
   // Sync initialProducts if loader data updates
   useEffect(() => {
@@ -238,12 +246,6 @@ export default function AppDashboard() {
       setMetrics(initialMetrics);
     }
   }, [initialProducts, initialMetrics]);
-
-  const handleSyncStore = useCallback(() => {
-    setToastTone("info");
-    setToastMessage("Syncing real-time catalog directly from your Shopify store...");
-    catalogFetcher.load(`/api/catalog?shop=${encodeURIComponent(shop)}&t=${Date.now()}`);
-  }, [shop]);
 
   const initialUnoptimizedCount = initialProducts.filter((p) => !isProdOptimized(p)).length;
 
@@ -1109,8 +1111,8 @@ export default function AppDashboard() {
         {
           content: "Sync Store Products",
           icon: RefreshIcon,
-          loading: catalogFetcher.state === "loading",
-          onAction: handleSyncStore,
+          loading: isSyncingStore,
+          onAction: syncStoreCatalog,
         },
       ]}
       actionGroups={[
@@ -1527,7 +1529,7 @@ export default function AppDashboard() {
                     heading="Import products to get started with RankPilot"
                     action={{
                       content: "Sync Catalog",
-                      onAction: handleSyncStore,
+                      onAction: syncStoreCatalog,
                     }}
                     image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                   >

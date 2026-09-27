@@ -26,7 +26,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   }
 
   const products = await getShopifyProducts(shop, adminClient);
-  const isLive = Boolean(adminClient) && !products.some((p) => p.id === "gid://shopify/Product/9182371901");
+  const isLive = Boolean(adminClient);
 
   return json({
     success: true,
