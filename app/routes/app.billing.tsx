@@ -52,6 +52,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   });
 };
 
+async function appFetch(url: string, options: RequestInit = {}) {
+  const headers = new Headers(options.headers || {});
+  try {
+    if (typeof window !== "undefined" && (window as any).shopify?.idToken) {
+      const token = await (window as any).shopify.idToken();
+      if (token && !headers.has("Authorization")) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+    }
+  } catch (e) {
+    console.warn("[appFetch] Could not get App Bridge idToken:", e);
+  }
+  return fetch(url, { ...options, headers });
+}
+
 export default function BillingPage() {
   const { shop, currentPlan, plans, hasActiveSubscription, subscriptionId, trialEndsAt, justConfirmed } =
     useLoaderData<typeof loader>();
@@ -78,7 +93,7 @@ export default function BillingPage() {
   const handleStartTrial = async () => {
     setIsUpdating(true);
     try {
-      const res = await fetch("/api/billing", {
+      const res = await appFetch("/api/billing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -117,7 +132,7 @@ export default function BillingPage() {
     if (!confirm("Are you sure you want to cancel your RankPilot Pro subscription?")) return;
     setIsCanceling(true);
     try {
-      const res = await fetch("/api/billing", {
+      const res = await appFetch("/api/billing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -240,7 +240,7 @@ query GetProducts($first: Int!, $after: String) {
         url
         altText
       }
-      priceRangeV2 {
+      priceRange {
         minVariantPrice {
           amount
           currencyCode
@@ -255,6 +255,27 @@ query GetProducts($first: Int!, $after: String) {
           key
           value
         }
+      }
+    }
+  }
+}
+`;
+
+export const SAFE_GET_PRODUCTS_QUERY = `#graphql
+query SafeGetProducts($first: Int!) {
+  products(first: $first) {
+    nodes {
+      id
+      title
+      handle
+      descriptionHtml
+      vendor
+      productType
+      tags
+      totalInventory
+      featuredImage {
+        url
+        altText
       }
     }
   }
@@ -505,7 +526,7 @@ export async function getShopifyProducts(
   if (adminClient && typeof adminClient.graphql === "function") {
     try {
       const data = await executeGraphQLWithThrottling<any>(adminClient, GET_PRODUCTS_QUERY, { first: 50 });
-      if (data?.data?.products?.nodes) {
+      if (data?.data?.products?.nodes && data.data.products.nodes.length > 0) {
         isLiveStore = true;
         products = data.data.products.nodes.map((node: any) => {
           const specMatrixNode = node.metafields?.nodes?.find(
@@ -521,6 +542,9 @@ export async function getShopifyProducts(
             (m: any) => m.key === "seo_score"
           );
 
+          const minPrice = node.priceRange?.minVariantPrice?.amount || node.priceRangeV2?.minVariantPrice?.amount || "0.00";
+          const currency = node.priceRange?.minVariantPrice?.currencyCode || node.priceRangeV2?.minVariantPrice?.currencyCode || "USD";
+
           return {
             id: node.id,
             title: node.title,
@@ -533,8 +557,8 @@ export async function getShopifyProducts(
             featuredImage: node.featuredImage,
             priceRange: {
               minVariantPrice: {
-                amount: node.priceRangeV2?.minVariantPrice?.amount || "0.00",
-                currencyCode: node.priceRangeV2?.minVariantPrice?.currencyCode || "USD",
+                amount: minPrice,
+                currencyCode: currency,
               },
             },
             seo: {
@@ -556,8 +580,46 @@ export async function getShopifyProducts(
         });
         console.log(`[getShopifyProducts] Live store sync active: Retrieved ${products.length} products directly from store ${shop}`);
       }
-    } catch (e) {
-      console.warn("Shopify GraphQL fetch failed, using local catalog:", e);
+    } catch (e: any) {
+      console.warn("[getShopifyProducts] Primary GraphQL query failed, attempting safe fallback query:", e?.message || e);
+    }
+
+    // Secondary fallback: if primary query failed or returned no nodes, execute streamlined safe query
+    if (!isLiveStore) {
+      try {
+        const safeData = await executeGraphQLWithThrottling<any>(adminClient, SAFE_GET_PRODUCTS_QUERY, { first: 50 });
+        if (safeData?.data?.products?.nodes && safeData.data.products.nodes.length > 0) {
+          isLiveStore = true;
+          products = safeData.data.products.nodes.map((node: any) => ({
+            id: node.id,
+            title: node.title,
+            handle: node.handle,
+            descriptionHtml: node.descriptionHtml || "",
+            vendor: node.vendor || "",
+            productType: node.productType || "",
+            tags: node.tags || [],
+            totalInventory: node.totalInventory ?? 0,
+            featuredImage: node.featuredImage,
+            priceRange: {
+              minVariantPrice: {
+                amount: "0.00",
+                currencyCode: "USD",
+              },
+            },
+            seo: {
+              title: node.title || "",
+              description: "",
+            },
+            rankpilotMetafields: {},
+            optimizationStatus: "NOT_OPTIMIZED",
+            aiScore: 40,
+            hasRollback: false,
+          }));
+          console.log(`[getShopifyProducts] Safe fallback query successful: Retrieved ${products.length} products from store ${shop}`);
+        }
+      } catch (safeErr: any) {
+        console.warn("[getShopifyProducts] Safe fallback query also failed:", safeErr?.message || safeErr);
+      }
     }
   }
 
