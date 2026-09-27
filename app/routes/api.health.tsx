@@ -18,6 +18,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       version: "1.0.0",
       uptimeSeconds: Math.floor(process.uptime()),
       database: dbStatus,
+      shopifyApiKey: process.env.SHOPIFY_API_KEY ? `${process.env.SHOPIFY_API_KEY.slice(0, 6)}...` : "missing",
+      shopifyApiSecretConfigured: Boolean(process.env.SHOPIFY_API_SECRET && process.env.SHOPIFY_API_SECRET !== "rankpilot_dev_secret"),
+      shopifyApiSecretLength: process.env.SHOPIFY_API_SECRET?.length || 0,
+      shopifyApiSecretPrefix: process.env.SHOPIFY_API_SECRET ? `${process.env.SHOPIFY_API_SECRET.slice(0, 4)}...` : "missing",
       timestamp: new Date().toISOString(),
     },
     {
