@@ -416,6 +416,12 @@ export default function AppDashboard() {
   const [currentOptimization, setCurrentOptimization] = useState<OptimizationResult | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
+  const [applySuccess, setApplySuccess] = useState(false);
+  const [pushedSuccessBanner, setPushedSuccessBanner] = useState<{
+    title: string;
+    id: string;
+    handle?: string;
+  } | null>(null);
 
   // Competitor modal state
   const [competitorExtracted, setCompetitorExtracted] = useState<CompetitorExtractedData | null>(null);
@@ -593,6 +599,7 @@ export default function AppDashboard() {
   // Open existing optimization or generate a fresh proposal
   const handleOpenOptimizationOrOptimize = async (product: ShopifyProductItem) => {
     setSelectedProduct(product);
+    setApplySuccess(false);
 
     if (isProdOptimized(product) && product.rankpilotMetafields?.specMatrix) {
       let parsedFaq = [];
@@ -633,6 +640,7 @@ export default function AppDashboard() {
   // Trigger 1-Click 3-Second Product Optimizer
   const handleTriggerOptimize = async (product: ShopifyProductItem, competitorUrl?: string) => {
     setSelectedProduct(product);
+    setApplySuccess(false);
     setIsOptimizing(true);
     setCurrentOptimization(null);
 
@@ -736,14 +744,20 @@ export default function AppDashboard() {
         };
       });
 
-      setActiveModal(null);
       if (data.shopifySynced === false) {
+        setActiveModal(null);
         setToastTone("info");
         setToastMessage(
           data.warning ||
             `⚠️ "${product.title}" saved in RankPilot, but Shopify store connection was offline. Click "Sync Store Products" to reconnect.`
         );
       } else {
+        setApplySuccess(true);
+        setPushedSuccessBanner({
+          title: product.title,
+          id: product.id,
+          handle: product.handle,
+        });
         setToastTone("success");
         setToastMessage(
           `✓ "${product.title}" pushed to Shopify store! Description, Spec Table & FAQs are now live in your store. ${
@@ -1636,6 +1650,29 @@ export default function AppDashboard() {
           </Layout.Section>
         </Layout>
 
+        {pushedSuccessBanner && (
+          <Box paddingBlockEnd="400">
+            <Banner
+              tone="success"
+              title={`Successfully pushed "${pushedSuccessBanner.title}" to Shopify catalog!`}
+              onDismiss={() => setPushedSuccessBanner(null)}
+              action={
+                shop && pushedSuccessBanner.id
+                  ? {
+                      content: "Open Product in Shopify Admin ↗",
+                      url: `https://admin.shopify.com/store/${shop.replace(".myshopify.com", "")}/products/${pushedSuccessBanner.id.replace("gid://shopify/Product/", "")}`,
+                      target: "_blank",
+                    }
+                  : undefined
+              }
+            >
+              <p>
+                The optimized product description, structured specification table, and buyer FAQs are now live in your Shopify store. Search index ping dispatched.
+              </p>
+            </Banner>
+          </Box>
+        )}
+
         {/* ========================================================================= */}
         {/* CORE CATALOG TABLE CARD WITH POLARIS INDEXFILTERS                         */}
         {/* ========================================================================= */}
@@ -1793,10 +1830,15 @@ export default function AppDashboard() {
       {/* ========================================================================= */}
       <OptimizationModal
         open={activeModal === "optimize"}
-        onClose={() => setActiveModal(null)}
+        onClose={() => {
+          setActiveModal(null);
+          setApplySuccess(false);
+        }}
         product={selectedProduct}
         optimization={currentOptimization}
         isApplying={isApplying}
+        applySuccess={applySuccess}
+        shop={shop}
         onApply={handleApplyOptimization}
         onRevert={handleRollback}
       />

@@ -25,6 +25,8 @@ interface OptimizationModalProps {
   product: ShopifyProductItem | null;
   optimization: OptimizationResult | null;
   isApplying: boolean;
+  applySuccess?: boolean;
+  shop?: string;
   onApply: (product: ShopifyProductItem, optimization: OptimizationResult) => void;
   onRevert?: (productId: string) => void;
 }
@@ -35,6 +37,8 @@ export function OptimizationModal({
   product,
   optimization,
   isApplying,
+  applySuccess = false,
+  shop = "",
   onApply,
   onRevert,
 }: OptimizationModalProps) {
@@ -740,9 +744,6 @@ export function OptimizationModal({
             </BlockStack>
           )}
 
-          {/* ========================================================================= */}
-          {/* CUSTOM MODAL FOOTER                                                       */}
-          {/* ========================================================================= */}
           {isApplying && (
             <Box paddingBlockEnd="300">
               <Banner tone="info">
@@ -753,11 +754,26 @@ export function OptimizationModal({
             </Box>
           )}
 
+          {applySuccess && (
+            <Box paddingBlockEnd="300">
+              <Banner tone="success" title="Successfully Updated & Pushed to Shopify!">
+                <BlockStack gap="100">
+                  <p>
+                    ✓ <strong>{product.title}</strong> is now updated live in your Shopify catalog.
+                  </p>
+                  <p style={{ color: "#374151", fontSize: "13px" }}>
+                    The product description now includes the introductory overview, structured specifications table, and buyer FAQs.
+                  </p>
+                </BlockStack>
+              </Banner>
+            </Box>
+          )}
+
           <Divider />
 
           <InlineStack align="space-between" blockAlign="center">
             {/* Left Action: Revert to Previous Snapshot */}
-            {product.hasRollback && onRevert ? (
+            {product.hasRollback && onRevert && !applySuccess ? (
               <Button
                 variant="plain"
                 tone="critical"
@@ -769,24 +785,45 @@ export function OptimizationModal({
               </Button>
             ) : (
               <Text as="span" variant="bodySm" tone="subdued">
-                Baseline Snapshot Active
+                {applySuccess ? "✓ Live on Shopify" : "Baseline Snapshot Active"}
               </Text>
             )}
 
-            {/* Right Action: Cancel and Apply */}
-            <ButtonGroup>
-              <Button onClick={onClose} disabled={isApplying}>
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                loading={isApplying}
-                disabled={isApplying}
-                onClick={() => onApply(product, optimization)}
-              >
-                {isApplying ? "Pushing to Store..." : "Apply & Push to Store"}
-              </Button>
-            </ButtonGroup>
+            {/* Right Action: Cancel and Apply / Done */}
+            {applySuccess ? (
+              <ButtonGroup>
+                {shop && product.id && (
+                  <Button
+                    variant="plain"
+                    url={`https://admin.shopify.com/store/${shop.replace(".myshopify.com", "")}/products/${product.id.replace("gid://shopify/Product/", "")}`}
+                    target="_blank"
+                  >
+                    View in Shopify Products ↗
+                  </Button>
+                )}
+                <Button
+                  variant="primary"
+                  tone="success"
+                  onClick={onClose}
+                >
+                  ✓ Done (Close)
+                </Button>
+              </ButtonGroup>
+            ) : (
+              <ButtonGroup>
+                <Button onClick={onClose} disabled={isApplying}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  loading={isApplying}
+                  disabled={isApplying}
+                  onClick={() => onApply(product, optimization)}
+                >
+                  {isApplying ? "Pushing to Store..." : "Apply & Push to Store"}
+                </Button>
+              </ButtonGroup>
+            )}
           </InlineStack>
         </BlockStack>
       </Modal.Section>
