@@ -445,6 +445,7 @@ mutation productSet($input: ProductSetInput!) {
       id
       title
       handle
+      descriptionHtml
       seo {
         title
         description
@@ -470,6 +471,7 @@ mutation productUpdate($input: ProductInput!) {
     product {
       id
       title
+      descriptionHtml
       seo {
         title
         description
@@ -814,10 +816,73 @@ export async function getShopifyProducts(
 }
 
 /**
+ * Safely weaves AI-generated Spec Matrices and Buyer Intent FAQs into product descriptionHtml.
+ * Preserves the merchant's original text, styles cleanly for modern Shopify themes,
+ * and encapsulates injected content within semantic HTML comments for reliable rollbacks and re-optimizations.
+ */
+export function buildEnhancedProductDescription({
+  originalDescriptionHtml = "",
+  title,
+  optimization,
+}: {
+  originalDescriptionHtml?: string;
+  title: string;
+  optimization: OptimizationResult;
+}): string {
+  let cleanBase = (originalDescriptionHtml || "").trim();
+  const startMarker = "<!-- rankpilot-seo-start -->";
+  const endMarker = "<!-- rankpilot-seo-end -->";
+  if (cleanBase.includes(startMarker) && cleanBase.includes(endMarker)) {
+    const startIndex = cleanBase.indexOf(startMarker);
+    const endIndex = cleanBase.indexOf(endMarker) + endMarker.length;
+    cleanBase = (cleanBase.slice(0, startIndex) + cleanBase.slice(endIndex)).trim();
+  }
+
+  // If original description was empty or just empty tags, create a rich introductory paragraph
+  if (!cleanBase || cleanBase === "<p></p>" || cleanBase === "<p><br></p>" || cleanBase === "<p>&nbsp;</p>") {
+    cleanBase = `<p>${optimization.summarySnippet || optimization.seoDescription || `${title} engineered for maximum performance, durability, and premium quality.`}</p>`;
+  }
+
+  // Build the Spec Matrix HTML block
+  let specHtml = "";
+  if (optimization.specMatrixHtml) {
+    specHtml = `
+<div class="rankpilot-spec-section" style="margin-top: 24px; margin-bottom: 24px;">
+  <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 12px; color: #111827;">Product Specifications & Features</h3>
+  ${optimization.specMatrixHtml}
+</div>`;
+  }
+
+  // Build the Buyer FAQ Accordion HTML block
+  let faqHtml = "";
+  if (Array.isArray(optimization.faqList) && optimization.faqList.length > 0) {
+    const faqItems = optimization.faqList
+      .map(
+        (faq) => `
+  <div style="margin-bottom: 16px; padding: 12px 16px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
+    <h4 style="margin: 0 0 6px 0; font-size: 15px; font-weight: 600; color: #1f2937;">Q: ${faq.question}</h4>
+    <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #4b5563;">${faq.answer}</p>
+  </div>`
+      )
+      .join("\n");
+
+    faqHtml = `
+<div class="rankpilot-faq-section" style="margin-top: 24px; margin-bottom: 24px;">
+  <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 12px; color: #111827;">Frequently Asked Questions</h3>
+  ${faqItems}
+</div>`;
+  }
+
+  const rankpilotBlock = `\n${startMarker}\n<div class="rankpilot-enhanced-content" style="font-family: inherit;">\n${specHtml}\n${faqHtml}\n</div>\n${endMarker}`;
+
+  return `${cleanBase}\n${rankpilotBlock}`.trim();
+}
+
+/**
  * Applies AI Optimization to a product:
  * 1. Takes snapshot into RevisionHistory for instant 1-click rollback.
  * 2. Updates SQLite ProductOptimization record.
- * 3. If Shopify Admin client is connected, executes productSet GraphQL mutation.
+ * 3. Weaves Spec Table and Buyer FAQs into descriptionHtml and updates Shopify GraphQL.
  */
 export async function applyOptimizationToProduct({
   productId,
@@ -832,6 +897,12 @@ export async function applyOptimizationToProduct({
   optimization: OptimizationResult;
   adminClient?: any;
 }) {
+  const enhancedDescription = buildEnhancedProductDescription({
+    originalDescriptionHtml: currentProduct.descriptionHtml,
+    title: currentProduct.title,
+    optimization,
+  });
+
   // 1. Snapshot prior state for Rollback & Safety Engine
   let optRecord = await db.productOptimization.findUnique({
     where: { shop_productId: { shop, productId } },
@@ -891,6 +962,7 @@ export async function applyOptimizationToProduct({
   // Update in-memory initial demo products cache
   const demoItem = INITIAL_DEMO_PRODUCTS.find((p) => p.id === productId);
   if (demoItem) {
+    demoItem.descriptionHtml = enhancedDescription;
     demoItem.seo.title = optimization.seoTitle;
     demoItem.seo.description = optimization.seoDescription;
     demoItem.optimizationStatus = "AI_READY";
@@ -908,11 +980,12 @@ export async function applyOptimizationToProduct({
 
   // 2. Modern Shopify GraphQL sync
   if (adminClient && typeof adminClient.graphql === "function") {
-    // 2a. Update SEO Title & Description
+    // 2a. Update descriptionHtml & SEO Title & Description in Shopify Product
     try {
       const updateRes = await executeGraphQLWithThrottling(adminClient, PRODUCT_UPDATE_MUTATION, {
         input: {
           id: productId,
+          descriptionHtml: enhancedDescription,
           seo: {
             title: optimization.seoTitle,
             description: optimization.seoDescription,
@@ -977,6 +1050,7 @@ export async function applyOptimizationToProduct({
       try {
         const input = {
           id: productId,
+          descriptionHtml: enhancedDescription,
           seo: {
             title: optimization.seoTitle,
             description: optimization.seoDescription,
@@ -1015,7 +1089,7 @@ export async function applyOptimizationToProduct({
     }
   }
 
-  return { success: true, aiScore: optimization.aiScore };
+  return { success: true, aiScore: optimization.aiScore, descriptionHtml: enhancedDescription };
 }
 
 /**
@@ -1072,6 +1146,7 @@ export async function rollbackProduct({
   const demoItem = INITIAL_DEMO_PRODUCTS.find((p) => p.id === productId);
   if (demoItem) {
     demoItem.title = snapshot.titleSnapshot || demoItem.title;
+    demoItem.descriptionHtml = snapshot.bodyHtmlSnapshot || demoItem.descriptionHtml;
     demoItem.seo.title = snapshot.seoTitleSnapshot || snapshot.titleSnapshot || undefined;
     demoItem.seo.description = snapshot.seoDescriptionSnapshot || "";
     demoItem.optimizationStatus = "NEEDS_OPTIMIZATION";
@@ -1083,11 +1158,12 @@ export async function rollbackProduct({
 
   // Restore via Shopify GraphQL if connected
   if (adminClient && typeof adminClient.graphql === "function") {
-    // Revert SEO title & description
+    // Revert SEO title, description, and original descriptionHtml
     try {
       await executeGraphQLWithThrottling(adminClient, PRODUCT_UPDATE_MUTATION, {
         input: {
           id: productId,
+          descriptionHtml: snapshot.bodyHtmlSnapshot || "",
           seo: {
             title: snapshot.seoTitleSnapshot || snapshot.titleSnapshot,
             description: snapshot.seoDescriptionSnapshot || "",
@@ -1116,6 +1192,7 @@ export async function rollbackProduct({
       try {
         const input = {
           id: productId,
+          descriptionHtml: snapshot.bodyHtmlSnapshot || "",
           seo: {
             title: snapshot.seoTitleSnapshot || snapshot.titleSnapshot,
             description: snapshot.seoDescriptionSnapshot || "",
@@ -1136,5 +1213,5 @@ export async function rollbackProduct({
     }
   }
 
-  return { success: true, restoredTitle: snapshot.seoTitleSnapshot };
+  return { success: true, restoredTitle: snapshot.seoTitleSnapshot, restoredDescription: snapshot.bodyHtmlSnapshot || "" };
 }

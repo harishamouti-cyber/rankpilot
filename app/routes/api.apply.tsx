@@ -78,6 +78,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return json({
       success: true,
       result,
+      updatedDescriptionHtml: result.descriptionHtml,
       indexNowPinged: autoPing,
       indexNowResult,
     });

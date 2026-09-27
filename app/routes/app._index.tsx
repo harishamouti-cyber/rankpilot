@@ -171,6 +171,7 @@ function saveStoredOptimization(shop: string, productId: string, optimization: a
   try {
     const current = getStoredOptimizations(shop);
     current[productId] = {
+      descriptionHtml: optimization.descriptionHtml,
       seoTitle: optimization.seoTitle,
       seoDescription: optimization.seoDescription,
       aiScore: optimization.aiScore || 96,
@@ -206,6 +207,7 @@ function mergeProductsWithLocalOptimizations(
     if (local) {
       return {
         ...p,
+        descriptionHtml: local.descriptionHtml || p.descriptionHtml,
         seo: {
           title: local.seoTitle || p.seo?.title || p.title,
           description: local.seoDescription || p.seo?.description || "",
@@ -357,6 +359,7 @@ export default function AppDashboard() {
           if (local) {
             return {
               ...p,
+              descriptionHtml: local.descriptionHtml || p.descriptionHtml,
               seo: {
                 title: local.seoTitle || p.seo?.title || p.title,
                 description: local.seoDescription || p.seo?.description || "",
@@ -678,8 +681,12 @@ export default function AppDashboard() {
         }),
       });
       const data = await res.json();
+      const updatedDesc = data.updatedDescriptionHtml || product.descriptionHtml;
       // Persist optimization in localStorage so it never reverts
-      saveStoredOptimization(shop, product.id, optimization);
+      saveStoredOptimization(shop, product.id, {
+        ...optimization,
+        descriptionHtml: updatedDesc,
+      });
 
       // Update local product state
       setProducts((prev) =>
@@ -687,6 +694,7 @@ export default function AppDashboard() {
           p.id === product.id
             ? {
                 ...p,
+                descriptionHtml: updatedDesc,
                 seo: {
                   title: optimization.seoTitle,
                   description: optimization.seoDescription,
@@ -773,6 +781,7 @@ export default function AppDashboard() {
                 aiScore: 38,
                 geoScore: 38,
                 hasRollback: false,
+                descriptionHtml: data.result?.restoredDescription !== undefined ? data.result.restoredDescription : p.descriptionHtml,
                 seo: {
                   title: data.result?.restoredTitle || p.title,
                   description: "",
@@ -859,7 +868,7 @@ export default function AppDashboard() {
           });
           const optData = await optRes.json();
           if (optData.optimization) {
-            await appFetch("/api/apply", {
+            const applyRes = await appFetch("/api/apply", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -869,9 +878,14 @@ export default function AppDashboard() {
                 currentProduct: prod,
               }),
             });
+            const applyData = await applyRes.json();
+            const updatedDesc = applyData.updatedDescriptionHtml || prod.descriptionHtml;
 
             // Persist each optimization in localStorage permanently
-            saveStoredOptimization(shop, prod.id, optData.optimization);
+            saveStoredOptimization(shop, prod.id, {
+              ...optData.optimization,
+              descriptionHtml: updatedDesc,
+            });
 
             // Instant live state update for user visual feedback
             setProducts((prev) =>
@@ -879,6 +893,7 @@ export default function AppDashboard() {
                 p.id === prod.id
                   ? {
                       ...p,
+                      descriptionHtml: updatedDesc,
                       seo: {
                         title: optData.optimization.seoTitle,
                         description: optData.optimization.seoDescription,
