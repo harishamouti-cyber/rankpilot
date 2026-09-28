@@ -927,21 +927,23 @@ export function buildEnhancedProductDescription({
 </div>`;
   }
 
-  // Build the Buyer FAQ Accordion HTML block
+  // Build the Buyer FAQ Accordion HTML block with Schema.org Microdata for 100% crawl compatibility
   let faqHtml = "";
   if (Array.isArray(optimization.faqList) && optimization.faqList.length > 0) {
     const faqItems = optimization.faqList
       .map(
         (faq) => `
-  <div style="margin-bottom: 16px; padding: 12px 16px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
-    <h4 style="margin: 0 0 6px 0; font-size: 15px; font-weight: 600; color: #1f2937;">Q: ${faq.question}</h4>
-    <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #4b5563;">${faq.answer}</p>
+  <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" style="margin-bottom: 16px; padding: 12px 16px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
+    <h4 itemprop="name" style="margin: 0 0 6px 0; font-size: 15px; font-weight: 600; color: #1f2937;">Q: ${faq.question}</h4>
+    <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+      <p itemprop="text" style="margin: 0; font-size: 14px; line-height: 1.6; color: #4b5563;">${faq.answer}</p>
+    </div>
   </div>`
       )
       .join("\n");
 
     faqHtml = `
-<div class="rankpilot-faq-section" style="margin-top: 24px; margin-bottom: 24px;">
+<div class="rankpilot-faq-section" itemscope itemtype="https://schema.org/FAQPage" style="margin-top: 24px; margin-bottom: 24px;">
   <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 12px; color: #111827;">Frequently Asked Questions</h3>
   ${faqItems}
 </div>`;
@@ -1171,7 +1173,25 @@ export async function applyOptimizationToProduct({
     }
 
     // 2d. Update media image alt text in Shopify via updateProductMediaAltText
-    const targetMediaId = currentProduct.featuredMediaId;
+    let targetMediaId = currentProduct.featuredMediaId;
+    if (!targetMediaId && formattedProductId && adminClient && typeof adminClient.graphql === "function") {
+      try {
+        const mediaRes = await executeGraphQLWithThrottling<any>(adminClient, `#graphql
+          query getProductMedia($id: ID!) {
+            product(id: $id) {
+              media(first: 1) {
+                nodes {
+                  id
+                }
+              }
+            }
+          }
+        `, { id: formattedProductId });
+        targetMediaId = mediaRes.data?.product?.media?.nodes?.[0]?.id;
+      } catch (err) {
+        // non-blocking
+      }
+    }
     if (targetMediaId && optimization.imageAltText) {
       try {
         await updateProductMediaAltText({

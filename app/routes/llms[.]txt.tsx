@@ -7,7 +7,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const shop = url.searchParams.get("shop") || "demo.myshopify.com";
 
   const setting = await db.appSetting.findUnique({ where: { shop } });
-  const domain = setting?.storeDomain || "store.example.com";
+  const domain = (setting?.storeDomain || shop || "store.myshopify.com").replace(/^https?:\/\//, "").replace(/\/.*$/, "");
 
   const products = await getShopifyProducts(shop);
 

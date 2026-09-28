@@ -3,6 +3,14 @@
   Guaranteed 0ms JavaScript footprint: Pure semantic HTML5 + CSS.
 {% endcomment %}
 
+{% assign schema_data = product.metafields.rankpilot.schema_json.value | default: product.metafields.rankpilot.schema_json %}
+
+{% if block.settings.inject_schema and schema_data != blank %}
+  <script type="application/ld+json">
+    {{ schema_data }}
+  </script>
+{% endif %}
+
 <div class="rankpilot-theme-bundle" style="margin: 24px 0; font-family: inherit;">
   {% if block.settings.show_spec_matrix and product.metafields.rankpilot.spec_matrix != blank %}
     <div class="rankpilot-matrix-section" style="margin-bottom: 24px;">
@@ -43,6 +51,13 @@
   "name": "RankPilot SEO Bundle",
   "target": "section",
   "settings": [
+    {
+      "type": "checkbox",
+      "id": "inject_schema",
+      "label": "Inject Schema.org JSON-LD",
+      "default": true,
+      "info": "Embeds rich structured data for Google AI Overviews and ChatGPT Search"
+    },
     {
       "type": "checkbox",
       "id": "show_spec_matrix",

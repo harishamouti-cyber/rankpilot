@@ -4,6 +4,7 @@ import { getShopifyProducts, ShopifyProductItem } from "~/services/shopify.serve
 import { optimizeProductWithAI } from "~/services/gemini.server";
 import { extractCompetitorData } from "~/services/competitor.server";
 import { authenticate, unauthenticated } from "~/shopify.server";
+import { db } from "~/db.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   if (request.method !== "POST") {
@@ -59,6 +60,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const imageUrl = product.featuredImage?.url;
     const currentAltText = product.imageAltText || product.featuredImage?.altText || "";
 
+    const setting = await db.appSetting.findUnique({ where: { shop: effectiveShop } });
+    const storeDomain = setting?.storeDomain || effectiveShop || "demo.myshopify.com";
+
     const optimization = await optimizeProductWithAI(
       {
         title: product.title,
@@ -71,6 +75,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         handle: product.handle,
         imageUrl,
         currentAltText,
+        shopDomain: storeDomain,
         competitorData: competitorData
           ? {
               url: competitorData.url,

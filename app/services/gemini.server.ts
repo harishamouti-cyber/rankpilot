@@ -48,6 +48,7 @@ export interface ProductInput {
   handle?: string;
   imageUrl?: string;
   currentAltText?: string;
+  shopDomain?: string;
   competitorData?: {
     url: string;
     title?: string;
@@ -154,7 +155,7 @@ Analyze this product and optimize it for top rankings on Google and citations on
 
 STRICT NEGATIVE CONSTRAINTS:
 1. NEVER include diagnostic or draft placeholders like "raw", "unoptimized", "sample", "test", "demo", "placeholder", or broken handles in any generated titles, descriptions, spec tables, or FAQs.
-2. Title cleanup: If a product is named "Raw unoptimized backpack 26L", clean it into "Vanguard AeroVent 26L Ultra-Light EDC Backpack".
+2. Title cleanup: Purge diagnostic words (raw, unoptimized, sample, test, demo, placeholder) while strictly retaining the merchant's real product name and authentic brand.
 3. Ensure all FAQ questions use natural, compelling consumer language without internal flags, diagnostic jargon, or technical artifacts.
 4. All copy must read like a high-end luxury D2C or Fortune 500 ecommerce brand.
 
@@ -180,11 +181,11 @@ Competitor Benchmark Data to Outrank:
 }
 
 Generate a strictly valid JSON response with the following keys:
-1. "seoTitle": High-CTR commercial title strictly under 60 characters containing core keyword and compelling hook (e.g. "Vanguard AeroVent 26L EDC Backpack | Waterproof Vanguard"). No raw/unoptimized text!
+1. "seoTitle": High-CTR commercial title strictly under 60 characters containing core keyword and compelling hook. No raw/unoptimized text!
 2. "seoDescription": Meta description strictly under 155 characters with clear value proposition and call-to-action.
 3. "specMatrixHtml": Clean HTML <table> with classes for Google AI Overview spec citation. Include columns for "Feature/Specification" and "Details" with rows for: Dimensions, Primary Materials, Key Features, Category / Best For, Warranty & Care. No markdown formatting inside the string, just semantic <table><thead>...<tbody>...</table>.
 4. "faqList": Array of exactly 3 objects: [{"question": "...", "answer": "..."}] answering natural, high-intent buyer objections for conversational search (e.g. sizing, durability, warranty).
-5. "schemaJson": Complete JSON-LD schema for Schema.org/Product, including offers, priceCurrency, price, itemAvailability, and shippingDetails.
+5. "schemaJson": Complete JSON-LD schema using Schema.org "@graph" containing both the "Product" (name, brand, image, offers with price, priceCurrency, itemAvailability, shippingDetails, returnPolicy, aggregateRating) AND the "FAQPage" (with mainEntity array of Question and Answer from faqList).
 6. "imageAltText": Entity-grounded, accessibility & GEO image alt text strictly under 125 characters. Accurately describe the product's physical appearance, primary color, materials, and key feature for Google Images and Generative AI visual search. NEVER start with "image of", "photo of", or "picture of".
 7. "aiScore": Number 94-98 representing calculated AI Readiness Score.
 8. "scoreBreakdown": Object with numbers (18-20 each) for "titleOptimization", "metaDescriptionQuality", "specMatrixCompleteness", "schemaRichness", "conversationalFaqDepth".
@@ -253,6 +254,49 @@ function sanitizeOptimizationResult(
     sanitizedAlt = generateSmartFallbackAltText(cleanTitle, brand, product.currentAltText);
   }
 
+  const rawDomain = (product.shopDomain || "demo.myshopify.com").replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  const productUrl = `https://${rawDomain}/products/${product.handle || "product"}`;
+
+  const sanitizedFaqs = Array.isArray(data.faqList) && data.faqList.length >= 3
+    ? data.faqList.slice(0, 3).map((f: any) => ({
+        question: stripDiagnosticWords(f.question || ""),
+        answer: stripDiagnosticWords(f.answer || ""),
+      }))
+    : generateDefaultFaqs(product);
+
+  let sanitizedSchema = typeof data.schemaJson === "object" && data.schemaJson !== null
+    ? data.schemaJson
+    : generateDefaultSchema(product);
+
+  // Normalize URLs to merchant's actual domain
+  try {
+    let schemaStr = JSON.stringify(sanitizedSchema);
+    schemaStr = schemaStr.replace(/https?:\/\/(?:store\.example\.com|example\.com)/g, `https://${rawDomain}`);
+    sanitizedSchema = JSON.parse(schemaStr);
+  } catch {}
+
+  // If schema is a single Product entity, stitch it into an @graph with FAQPage for complete AI coverage
+  if (sanitizedSchema && (sanitizedSchema["@type"] === "Product" || !sanitizedSchema["@graph"])) {
+    sanitizedSchema = {
+      "@context": "https://schema.org",
+      "@graph": [
+        sanitizedSchema["@type"] ? sanitizedSchema : { ...sanitizedSchema, "@type": "Product" },
+        {
+          "@type": "FAQPage",
+          "@id": `${productUrl}#faq`,
+          "mainEntity": sanitizedFaqs.map((f: any) => ({
+            "@type": "Question",
+            "name": f.question,
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": f.answer,
+            },
+          })),
+        },
+      ],
+    };
+  }
+
   return {
     seoTitle: sanitizedTitle,
     seoDescription: sanitizedDesc,
@@ -260,17 +304,8 @@ function sanitizeOptimizationResult(
       typeof data.specMatrixHtml === "string" && data.specMatrixHtml.includes("<table")
         ? stripDiagnosticWords(data.specMatrixHtml)
         : generateDefaultSpecMatrix(product),
-    faqList:
-      Array.isArray(data.faqList) && data.faqList.length >= 3
-        ? data.faqList.slice(0, 3).map((f: any) => ({
-            question: stripDiagnosticWords(f.question || ""),
-            answer: stripDiagnosticWords(f.answer || ""),
-          }))
-        : generateDefaultFaqs(product),
-    schemaJson:
-      typeof data.schemaJson === "object" && data.schemaJson !== null
-        ? data.schemaJson
-        : generateDefaultSchema(product),
+    faqList: sanitizedFaqs,
+    schemaJson: sanitizedSchema,
     imageAltText: sanitizedAlt,
     aiScore:
       typeof data.aiScore === "number" && data.aiScore >= 90 && data.aiScore <= 100
@@ -462,63 +497,99 @@ function generateDefaultSchema(product: ProductInput): Record<string, any> {
   const cleanTitle = cleanCommercialProductTitle(product.title, product.vendor);
   const price = product.price || "49.99";
   const currency = product.currency || "USD";
-  const altText = product.currentAltText || `${cleanTitle} by ${product.vendor || "RankPilot"}`;
+  const brand = product.vendor || "RankPilot Partner Brand";
+  const altText = product.currentAltText || `${cleanTitle} by ${brand}`;
+  const rawDomain = (product.shopDomain || "demo.myshopify.com").replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  const productUrl = `https://${rawDomain}/products/${product.handle || "product"}`;
+
+  const faqs = generateDefaultFaqs(product);
+
   return {
-    "@context": "https://schema.org/",
-    "@type": "Product",
-    "name": cleanTitle,
-    "brand": {
-      "@type": "Brand",
-      "name": product.vendor || "RankPilot Partner Brand",
-    },
-    ...(product.imageUrl
-      ? {
-          "image": {
-            "@type": "ImageObject",
-            "url": product.imageUrl,
-            "caption": altText,
-            "name": cleanTitle,
-          },
-        }
-      : {}),
-    "description": product.descriptionHtml
-      ? stripDiagnosticWords(product.descriptionHtml.replace(/<[^>]+>/g, "")).slice(0, 250)
-      : `High-performance ${cleanTitle} engineered for maximum durability and everyday performance.`,
-    "offers": {
-      "@type": "Offer",
-      "url": `https://store.example.com/products/${product.handle || "product"}`,
-      "priceCurrency": currency,
-      "price": price,
-      "itemAvailability": "https://schema.org/InStock",
-      "priceValidUntil": "2027-12-31",
-      "shippingDetails": {
-        "@type": "OfferShippingDetails",
-        "shippingRate": {
-          "@type": "MonetaryAmount",
-          "value": "0.00",
-          "currency": currency,
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Product",
+        "@id": `${productUrl}#product`,
+        "name": cleanTitle,
+        "url": productUrl,
+        "brand": {
+          "@type": "Brand",
+          "name": brand,
         },
-        "deliveryTime": {
-          "@type": "ShippingDeliveryTime",
-          "handlingTime": {
-            "@type": "QuantitativeValue",
-            "minValue": 0,
-            "maxValue": 1,
-            "unitCode": "d",
+        ...(product.imageUrl
+          ? {
+              "image": [product.imageUrl],
+            }
+          : {}),
+        "description": product.descriptionHtml
+          ? stripDiagnosticWords(product.descriptionHtml.replace(/<[^>]+>/g, " ")).trim().slice(0, 300)
+          : `Authentic ${cleanTitle} by ${brand}. Engineered for premium durability, precision design, and everyday performance.`,
+        "sku": product.handle || "product-sku",
+        "offers": {
+          "@type": "Offer",
+          "@id": `${productUrl}#offer`,
+          "url": productUrl,
+          "priceCurrency": currency,
+          "price": price,
+          "itemAvailability": "https://schema.org/InStock",
+          "priceValidUntil": "2027-12-31",
+          "itemCondition": "https://schema.org/NewCondition",
+          "seller": {
+            "@type": "Organization",
+            "name": brand,
           },
-          "transitTime": {
-            "@type": "QuantitativeValue",
-            "minValue": 2,
-            "maxValue": 5,
-            "unitCode": "d",
+          "shippingDetails": {
+            "@type": "OfferShippingDetails",
+            "shippingRate": {
+              "@type": "MonetaryAmount",
+              "value": "0.00",
+              "currency": currency,
+            },
+            "deliveryTime": {
+              "@type": "ShippingDeliveryTime",
+              "handlingTime": {
+                "@type": "QuantitativeValue",
+                "minValue": 0,
+                "maxValue": 1,
+                "unitCode": "d",
+              },
+              "transitTime": {
+                "@type": "QuantitativeValue",
+                "minValue": 2,
+                "maxValue": 5,
+                "unitCode": "d",
+              },
+            },
           },
+          "hasMerchantReturnPolicy": {
+            "@type": "MerchantReturnPolicy",
+            "applicableCountry": "US",
+            "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+            "merchantReturnDays": 30,
+            "returnMethod": "https://schema.org/ReturnByMail",
+            "returnFees": "https://schema.org/FreeReturn",
+          },
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.9",
+          "reviewCount": "128",
+          "bestRating": "5",
+          "worstRating": "1",
         },
       },
-    },
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.9",
-      "reviewCount": "128",
-    },
+      {
+        "@type": "FAQPage",
+        "@id": `${productUrl}#faq`,
+        "mainEntity": faqs.map((faq) => ({
+          "@type": "Question",
+          "name": faq.question,
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": faq.answer,
+          },
+        })),
+      },
+    ],
   };
 }

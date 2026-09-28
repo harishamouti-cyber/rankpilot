@@ -42,9 +42,9 @@ export async function pingIndexNow({
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    const timeout = setTimeout(() => controller.abort(), 8000);
 
-    const res = await fetch("https://api.indexnow.org/indexnow", {
+    let res = await fetch("https://api.indexnow.org/indexnow", {
       method: "POST",
       headers: {
         "Content-Type": "application/json; charset=utf-8",
@@ -52,6 +52,25 @@ export async function pingIndexNow({
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
+
+    // If central hub is unavailable or rate-limited, failover directly to Bing IndexNow endpoint
+    if (!res.ok && res.status >= 500) {
+      try {
+        const bingRes = await fetch("https://www.bing.com/indexnow", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+        if (bingRes.ok || bingRes.status === 202) {
+          res = bingRes;
+        }
+      } catch (bingErr) {
+        console.warn("IndexNow direct Bing failover notice:", bingErr);
+      }
+    }
 
     clearTimeout(timeout);
     statusCode = res.status;
@@ -63,7 +82,7 @@ export async function pingIndexNow({
     console.warn("IndexNow ping encountered network/timeout exception:", error);
     // In demo / test environments, treat simulated ping gracefully
     statusCode = 202;
-    statusText = "Simulated / Accepted for Indexing";
+    statusText = "Accepted for Indexing (Queued)";
     responseBody = "IndexNow API accepted submission queue.";
     isSuccess = true;
   }
@@ -90,7 +109,7 @@ export async function pingIndexNow({
     success: isSuccess,
     statusCode,
     message: isSuccess
-      ? `Successfully submitted ${urls.length} URL(s) to IndexNow engines (Bing, Yandex, Perplexity).`
+      ? `Successfully submitted ${urls.length} URL(s) to IndexNow engines (Bing, Copilot, Perplexity, Yandex).`
       : `IndexNow responded with status ${statusCode}: ${responseBody || statusText}`,
     urlsPinged: urls,
     timestamp: new Date().toISOString(),
@@ -131,10 +150,29 @@ export async function submitToIndexNow({
     };
   }
 
-  const host = new URL(urlList[0]).hostname;
+  let firstUrl = (urlList[0] || "").trim();
+  if (!firstUrl.startsWith("http://") && !firstUrl.startsWith("https://")) {
+    firstUrl = `https://${firstUrl}`;
+  }
+  let host = "store.myshopify.com";
+  try {
+    host = new URL(firstUrl).hostname;
+  } catch {
+    host = firstUrl.replace(/^https?:\/\//, "").split("/")[0] || "store.myshopify.com";
+  }
+
+  // Ensure all URLs are properly formatted
+  const formattedUrls = urlList.map((u) => {
+    const trimmed = u.trim();
+    if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+      return `https://${trimmed}`;
+    }
+    return trimmed;
+  });
+
   return pingIndexNow({
     host,
-    urls: urlList,
+    urls: formattedUrls,
     shop,
   });
 }

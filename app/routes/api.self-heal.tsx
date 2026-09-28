@@ -89,14 +89,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   let adminClient: any = null;
   let shop = "demo.myshopify.com";
+  let parsedBody: any = {};
+  try {
+    parsedBody = await request.json();
+    if (parsedBody?.shop) shop = parsedBody.shop;
+  } catch {}
 
   try {
     const authResult = await authenticate.admin(request);
     adminClient = authResult.admin;
-    shop = authResult.session.shop;
+    if (authResult.session?.shop) {
+      shop = authResult.session.shop;
+    }
   } catch {
-    const body = await request.clone().json().catch(() => ({}));
-    if (body.shop) shop = body.shop;
+    // Demo or development mode fallback
   }
 
   const declaredDefinitions: Array<{ key: string; status: string; error?: string }> = [];
@@ -147,13 +153,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   // Trigger self-healing repair on drifted products
   let productIds: string[] | undefined;
-  try {
-    const body = await request.json();
-    if (body.productIds && Array.isArray(body.productIds)) {
-      productIds = body.productIds;
-    }
-  } catch {
-    // No body or empty body
+  if (parsedBody?.productIds && Array.isArray(parsedBody.productIds)) {
+    productIds = parsedBody.productIds;
   }
 
   const repairResult = await repairDriftedProducts(shop, productIds, adminClient);
