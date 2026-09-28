@@ -171,7 +171,7 @@ STRICT INSTRUCTIONS:
   }
 }
 
-function generateSmartFallbackAltText(productTitle: string, vendor?: string): string {
+export function generateSmartFallbackAltText(productTitle: string, vendor?: string): string {
   const brand = vendor ? `${vendor} ` : "";
   const cleanTitle = productTitle
     .replace(/\b(raw|unoptimized|sample|test|demo)\b/gi, "")

@@ -1,6 +1,7 @@
 import { db } from "~/db.server";
 import { clearSessionCache } from "~/shopify.server";
 import { OptimizationResult } from "./gemini.server";
+import { updateProductMediaAltText } from "./vision.server";
 
 export interface ShopifyProductItem {
   [key: string]: unknown;
@@ -16,6 +17,8 @@ export interface ShopifyProductItem {
     url: string;
     altText?: string;
   };
+  featuredMediaId?: string;
+  imageAltText?: string;
   priceRange: {
     minVariantPrice: {
       amount: string;
@@ -54,6 +57,8 @@ const INITIAL_DEMO_PRODUCTS: ShopifyProductItem[] = [
       url: "https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=800&auto=format&fit=crop&q=80",
       altText: "The Collection Snowboard: Liquid",
     },
+    featuredMediaId: "gid://shopify/MediaImage/8472917001-media",
+    imageAltText: "The Collection Snowboard Liquid matte carbon directional freeride snowboard on powder snow",
     priceRange: {
       minVariantPrice: { amount: "749.95", currencyCode: "USD" },
     },
@@ -95,6 +100,8 @@ const INITIAL_DEMO_PRODUCTS: ShopifyProductItem[] = [
       url: "https://images.unsplash.com/photo-1522056615691-da7b8106c665?w=800&auto=format&fit=crop&q=80",
       altText: "The Collection Snowboard: Oxygen",
     },
+    featuredMediaId: "gid://shopify/MediaImage/8472917002-media",
+    imageAltText: "The Collection Snowboard Oxygen ultralight alpine freeride board with basalt dampening",
     priceRange: {
       minVariantPrice: { amount: "885.00", currencyCode: "USD" },
     },
@@ -135,6 +142,8 @@ const INITIAL_DEMO_PRODUCTS: ShopifyProductItem[] = [
       url: "https://images.unsplash.com/photo-1498084393753-b411b2d26b34?w=800&auto=format&fit=crop&q=80",
       altText: "The 3p Fulfilled Snowboard",
     },
+    featuredMediaId: "gid://shopify/MediaImage/8472917003-media",
+    imageAltText: "",
     priceRange: {
       minVariantPrice: { amount: "2629.95", currencyCode: "USD" },
     },
@@ -161,6 +170,8 @@ const INITIAL_DEMO_PRODUCTS: ShopifyProductItem[] = [
       url: "https://images.unsplash.com/photo-1565992441121-4367c2967103?w=800&auto=format&fit=crop&q=80",
       altText: "The Multi-managed Snowboard",
     },
+    featuredMediaId: "gid://shopify/MediaImage/8472917004-media",
+    imageAltText: "The Multi-managed Snowboard twin-tip freestyle park board with reinforced steel edges",
     priceRange: {
       minVariantPrice: { amount: "629.95", currencyCode: "USD" },
     },
@@ -394,6 +405,19 @@ query GetProducts($first: Int!, $after: String) {
         url
         altText
       }
+      media(first: 3) {
+        nodes {
+          id
+          alt
+          ... on MediaImage {
+            id
+            image {
+              url
+              altText
+            }
+          }
+        }
+      }
       priceRangeV2 {
         minVariantPrice {
           amount
@@ -436,6 +460,19 @@ query SafeGetProducts($first: Int!) {
       featuredImage {
         url
         altText
+      }
+      media(first: 3) {
+        nodes {
+          id
+          alt
+          ... on MediaImage {
+            id
+            image {
+              url
+              altText
+            }
+          }
+        }
       }
     }
   }
@@ -697,6 +734,10 @@ export async function getShopifyProducts(
           const seoScoreVal = node.seoScore?.value;
           const seoScore = seoScoreVal ? parseInt(seoScoreVal, 10) : undefined;
 
+          const firstMedia = node.media?.nodes?.[0];
+          const featuredMediaId = firstMedia?.id;
+          const imageAltText = firstMedia?.alt || firstMedia?.image?.altText || node.featuredImage?.altText || "";
+
           const minPrice =
             node.priceRangeV2?.minVariantPrice?.amount ||
             node.priceRange?.minVariantPrice?.amount ||
@@ -715,7 +756,12 @@ export async function getShopifyProducts(
             productType: node.productType || "",
             tags: node.tags || [],
             totalInventory: node.totalInventory ?? 0,
-            featuredImage: node.featuredImage,
+            featuredImage: node.featuredImage ? {
+              url: node.featuredImage.url,
+              altText: imageAltText || node.featuredImage.altText,
+            } : undefined,
+            featuredMediaId,
+            imageAltText,
             priceRange: {
               minVariantPrice: {
                 amount: minPrice,
@@ -754,31 +800,41 @@ export async function getShopifyProducts(
         const safeData = await executeGraphQLWithThrottling<any>(adminClient, SAFE_GET_PRODUCTS_QUERY, { first: 50 });
         if (safeData?.data?.products?.nodes !== undefined) {
           isLiveStore = true;
-          products = safeData.data.products.nodes.map((node: any) => ({
-            id: node.id,
-            title: node.title,
-            handle: node.handle,
-            descriptionHtml: node.descriptionHtml || "",
-            vendor: node.vendor || "",
-            productType: node.productType || "",
-            tags: node.tags || [],
-            totalInventory: node.totalInventory ?? 0,
-            featuredImage: node.featuredImage,
-            priceRange: {
-              minVariantPrice: {
-                amount: "0.00",
-                currencyCode: "USD",
+          products = safeData.data.products.nodes.map((node: any) => {
+            const firstMedia = node.media?.nodes?.[0];
+            const featuredMediaId = firstMedia?.id;
+            const imageAltText = firstMedia?.alt || firstMedia?.image?.altText || node.featuredImage?.altText || "";
+            return {
+              id: node.id,
+              title: node.title,
+              handle: node.handle,
+              descriptionHtml: node.descriptionHtml || "",
+              vendor: node.vendor || "",
+              productType: node.productType || "",
+              tags: node.tags || [],
+              totalInventory: node.totalInventory ?? 0,
+              featuredImage: node.featuredImage ? {
+                url: node.featuredImage.url,
+                altText: imageAltText || node.featuredImage.altText,
+              } : undefined,
+              featuredMediaId,
+              imageAltText,
+              priceRange: {
+                minVariantPrice: {
+                  amount: "0.00",
+                  currencyCode: "USD",
+                },
               },
-            },
-            seo: {
-              title: node.title || "",
-              description: "",
-            },
-            rankpilotMetafields: {},
-            optimizationStatus: "NOT_OPTIMIZED",
-            aiScore: 40,
-            hasRollback: false,
-          }));
+              seo: {
+                title: node.title || "",
+                description: "",
+              },
+              rankpilotMetafields: {},
+              optimizationStatus: "NOT_OPTIMIZED",
+              aiScore: 40,
+              hasRollback: false,
+            };
+          });
           console.log(`[getShopifyProducts] Safe fallback query successful: Retrieved ${products.length} products from store ${shop}`);
         }
       } catch (safeErr: any) {
@@ -800,6 +856,7 @@ export async function getShopifyProducts(
   return products.map((prod) => {
     const opt = optimizationMap.get(prod.id);
     if (opt) {
+      const mergedAlt = opt.imageAltText || prod.imageAltText || prod.featuredImage?.altText || "";
       return {
         ...prod,
         title: opt.optimizedTitle || prod.title,
@@ -807,6 +864,11 @@ export async function getShopifyProducts(
           title: opt.optimizedTitle || prod.seo?.title || prod.title,
           description: opt.optimizedMetaDesc || prod.seo?.description || "",
         },
+        imageAltText: mergedAlt,
+        featuredImage: prod.featuredImage ? {
+          ...prod.featuredImage,
+          altText: mergedAlt || prod.featuredImage.altText,
+        } : undefined,
         optimizationStatus: opt.status as any,
         aiScore: opt.aiScore,
         geoScore: opt.aiScore,
@@ -936,6 +998,7 @@ export async function applyOptimizationToProduct({
         specMatrixHtml: optimization.specMatrixHtml,
         faqJson: JSON.stringify(optimization.faqList),
         schemaJson: JSON.stringify(optimization.schemaJson),
+        imageAltText: optimization.imageAltText || currentProduct.imageAltText || currentProduct.featuredImage?.altText,
         lastOptimizedAt: new Date(),
       },
     });
@@ -952,6 +1015,7 @@ export async function applyOptimizationToProduct({
       seoTitleSnapshot: currentProduct.seo?.title || currentProduct.title,
       seoDescriptionSnapshot: currentProduct.seo?.description || "",
       metafieldsSnapshot: JSON.stringify(currentProduct.rankpilotMetafields || {}),
+      altTextSnapshot: currentProduct.imageAltText || currentProduct.featuredImage?.altText || "",
       rolledBack: false,
     },
   });
@@ -967,6 +1031,7 @@ export async function applyOptimizationToProduct({
       specMatrixHtml: optimization.specMatrixHtml,
       faqJson: JSON.stringify(optimization.faqList),
       schemaJson: JSON.stringify(optimization.schemaJson),
+      imageAltText: optimization.imageAltText || currentProduct.imageAltText || currentProduct.featuredImage?.altText,
       lastOptimizedAt: new Date(),
     },
   });
@@ -978,6 +1043,12 @@ export async function applyOptimizationToProduct({
     if (!demoItem.seo) demoItem.seo = { title: "", description: "" };
     demoItem.seo.title = optimization.seoTitle;
     demoItem.seo.description = optimization.seoDescription;
+    if (optimization.imageAltText) {
+      demoItem.imageAltText = optimization.imageAltText;
+      if (demoItem.featuredImage) {
+        demoItem.featuredImage.altText = optimization.imageAltText;
+      }
+    }
     demoItem.optimizationStatus = "AI_READY";
     demoItem.aiScore = optimization.aiScore;
     demoItem.geoScore = optimization.aiScore;
@@ -1098,6 +1169,22 @@ export async function applyOptimizationToProduct({
     } else {
       console.warn(`[Shopify Product Push Notice] ${formattedProductId} live write skipped: ${shopifyErrorMessage || "Store API rejected update"}`);
     }
+
+    // 2d. Update media image alt text in Shopify via updateProductMediaAltText
+    const targetMediaId = currentProduct.featuredMediaId;
+    if (targetMediaId && optimization.imageAltText) {
+      try {
+        await updateProductMediaAltText({
+          adminClient,
+          productId: formattedProductId,
+          mediaId: targetMediaId,
+          altText: optimization.imageAltText,
+        });
+        console.log(`[Shopify GraphQL] Successfully updated media ${targetMediaId} alt text to: "${optimization.imageAltText}"`);
+      } catch (mediaErr: any) {
+        console.warn("[Shopify GraphQL] updateProductMediaAltText notice:", mediaErr?.message || mediaErr);
+      }
+    }
   }
 
   return {
@@ -1176,6 +1263,7 @@ export async function rollbackProduct({
           specMatrixHtml: null,
           faqJson: null,
           schemaJson: null,
+          imageAltText: snapshot.altTextSnapshot,
         },
       });
     } catch {}
@@ -1189,6 +1277,12 @@ export async function rollbackProduct({
     if (!demoItem.seo) demoItem.seo = { title: "", description: "" };
     demoItem.seo.title = snapshot.seoTitleSnapshot || snapshot.titleSnapshot || undefined;
     demoItem.seo.description = snapshot.seoDescriptionSnapshot || "";
+    if (snapshot.altTextSnapshot !== undefined) {
+      demoItem.imageAltText = snapshot.altTextSnapshot || "";
+      if (demoItem.featuredImage) {
+        demoItem.featuredImage.altText = snapshot.altTextSnapshot || "";
+      }
+    }
     demoItem.optimizationStatus = "NEEDS_OPTIMIZATION";
     demoItem.aiScore = 38;
     demoItem.geoScore = 38;

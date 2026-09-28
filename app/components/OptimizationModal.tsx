@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Modal,
   Card,
@@ -12,6 +12,7 @@ import {
   Divider,
   ProgressBar,
   Banner,
+  TextField,
 } from "@shopify/polaris";
 import {
   UndoIcon,
@@ -46,6 +47,19 @@ export function OptimizationModal({
 }: OptimizationModalProps) {
   const [selectedView, setSelectedView] = useState<0 | 1>(0);
   const [simulationEngine, setSimulationEngine] = useState<"google" | "chatgpt" | "perplexity">("google");
+
+  const beforeAltText = product ? (product.imageAltText || product.featuredImage?.altText || "") : "";
+  const [editableAltText, setEditableAltText] = useState(
+    optimization?.imageAltText || beforeAltText
+  );
+
+  useEffect(() => {
+    if (optimization?.imageAltText) {
+      setEditableAltText(optimization.imageAltText);
+    } else if (beforeAltText) {
+      setEditableAltText(beforeAltText);
+    }
+  }, [optimization?.imageAltText, beforeAltText]);
 
   if (!product || !optimization) return null;
 
@@ -228,11 +242,73 @@ export function OptimizationModal({
                       </Box>
                     </BlockStack>
 
+                    {/* Featured Image & Current Alt Text */}
+                    <BlockStack gap="100">
+                      <InlineStack align="space-between" blockAlign="center">
+                        <Text as="p" variant="bodySm" fontWeight="semibold" tone="subdued">
+                          Featured Image Alt Text
+                        </Text>
+                        <Badge tone={beforeAltText ? "info" : "critical"} size="small">
+                          {beforeAltText ? `${beforeAltText.length}/125 chars` : "0/125 chars (Missing)"}
+                        </Badge>
+                      </InlineStack>
+                      <Box
+                        padding="200"
+                        background="bg-surface"
+                        borderRadius="150"
+                        borderWidth="025"
+                        borderColor={beforeAltText ? "border" : "border-critical"}
+                      >
+                        <InlineStack gap="200" blockAlign="center">
+                          {product.featuredImage?.url ? (
+                            <img
+                              src={product.featuredImage.url}
+                              alt={beforeAltText || product.title}
+                              style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 4, border: "1px solid #e1e3e5", flexShrink: 0 }}
+                            />
+                          ) : (
+                            <div style={{ width: 44, height: 44, background: "#f1f2f4", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
+                              🖼️
+                            </div>
+                          )}
+                          <BlockStack gap="050">
+                            <Text as="p" variant="bodySm" tone={beforeAltText ? "subdued" : "critical"}>
+                              {beforeAltText || "Missing (0 chars) — Invisible to Google Images & AI visual engines"}
+                            </Text>
+                          </BlockStack>
+                        </InlineStack>
+                      </Box>
+                    </BlockStack>
+
                     {/* Dedicated Audit Findings Badges */}
                     <BlockStack gap="200">
                       <Text as="p" variant="bodySm" fontWeight="bold">
                         Audit Findings &amp; Search Gaps:
                       </Text>
+
+                      {!beforeAltText && (
+                        <Box
+                          padding="200"
+                          background="bg-surface"
+                          borderRadius="150"
+                          borderWidth="025"
+                          borderColor="border-critical"
+                        >
+                          <InlineStack gap="200" blockAlign="center">
+                            <Badge tone="critical" size="small">
+                              [✕] Missing
+                            </Badge>
+                            <BlockStack gap="050">
+                              <Text as="p" variant="bodySm" fontWeight="semibold">
+                                Missing Image Alt Text &amp; Visual Grounding
+                              </Text>
+                              <Text as="p" variant="bodyXs" tone="subdued">
+                                Google Images and multimodal AI search cannot index product aesthetics or build.
+                              </Text>
+                            </BlockStack>
+                          </InlineStack>
+                        </Box>
+                      )}
 
                       <Box
                         padding="200"
@@ -351,6 +427,49 @@ export function OptimizationModal({
                       <Text as="p" variant="bodySm">
                         {renderHighlightedDescription(optimization.seoDescription)}
                       </Text>
+                    </BlockStack>
+
+                    {/* AI GEO-Optimized Image Alt Text */}
+                    <BlockStack gap="100">
+                      <InlineStack align="space-between" blockAlign="center">
+                        <Text as="p" variant="bodySm" fontWeight="semibold" tone="success">
+                          AI GEO-Optimized Image Alt Text
+                        </Text>
+                        <Badge tone={editableAltText.length <= 125 ? "success" : "critical"} size="small">
+                          {`${editableAltText.length}/125 chars (GEO Ready)`}
+                        </Badge>
+                      </InlineStack>
+                      <Box
+                        padding="200"
+                        background="bg-surface-secondary"
+                        borderRadius="150"
+                        borderWidth="025"
+                        borderColor="border-success"
+                      >
+                        <InlineStack gap="200" blockAlign="start">
+                          {product.featuredImage?.url ? (
+                            <img
+                              src={product.featuredImage.url}
+                              alt={editableAltText}
+                              style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 4, border: "1px solid #10b981", flexShrink: 0, marginTop: 4 }}
+                            />
+                          ) : (
+                            <div style={{ width: 44, height: 44, background: "#ecfdf5", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0, marginTop: 4 }}>
+                              📷
+                            </div>
+                          )}
+                          <div style={{ flex: 1 }}>
+                            <TextField
+                              label="Image Alt Text"
+                              labelHidden
+                              value={editableAltText}
+                              onChange={(val) => setEditableAltText(val)}
+                              autoComplete="off"
+                              helpText="Entity-grounded physical & context description for Google Images & AI visual engines."
+                            />
+                          </div>
+                        </InlineStack>
+                      </Box>
                     </BlockStack>
 
                     {/* Formatted Spec Matrix (Rendered HTML) */}
@@ -509,6 +628,18 @@ export function OptimizationModal({
                         }}
                       >
                         ✓ In Stock &amp; Ships in 24-48h
+                      </div>
+                      <div
+                        style={{
+                          backgroundColor: "#e8f0fe",
+                          padding: "5px 12px",
+                          borderRadius: 16,
+                          fontSize: 12,
+                          color: "#1967d2",
+                          fontWeight: 500,
+                        }}
+                      >
+                        📷 Visual Grounding: Alt text verified for Google Images
                       </div>
                     </InlineStack>
 
@@ -750,7 +881,7 @@ export function OptimizationModal({
             <Box paddingBlockEnd="300">
               <Banner tone="info">
                 <p>
-                  <strong>Pushing to Shopify Store...</strong> Updating product description, structured specification matrix, and buyer FAQs live in your Shopify catalog.
+                  <strong>Pushing to Shopify Store...</strong> Updating product description, structured specification matrix, buyer FAQs, and GEO image alt text live in your Shopify catalog.
                 </p>
               </Banner>
             </Box>
@@ -764,7 +895,7 @@ export function OptimizationModal({
                     ✓ <strong>{product.title}</strong> is now updated live in your Shopify catalog.
                   </p>
                   <p style={{ color: "#374151", fontSize: "13px" }}>
-                    The product description now includes the introductory overview, structured specifications table, and buyer FAQs.
+                    The product catalog now includes the introductory overview, structured specifications table, buyer FAQs, and image alt text for Google Images &amp; AI visual search.
                   </p>
                 </BlockStack>
               </Banner>
@@ -839,7 +970,7 @@ export function OptimizationModal({
                   variant="primary"
                   loading={isApplying}
                   disabled={isApplying}
-                  onClick={() => onApply(product, optimization)}
+                  onClick={() => onApply(product, { ...optimization, imageAltText: editableAltText })}
                 >
                   {isApplying ? "Pushing to Store..." : "Apply & Push to Store"}
                 </Button>

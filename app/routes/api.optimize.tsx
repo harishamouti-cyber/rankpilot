@@ -56,6 +56,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }
     }
 
+    const imageUrl = product.featuredImage?.url;
+    const currentAltText = product.imageAltText || product.featuredImage?.altText || "";
+
     const optimization = await optimizeProductWithAI(
       {
         title: product.title,
@@ -66,6 +69,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         price: product.priceRange?.minVariantPrice?.amount || "0.00",
         currency: product.priceRange?.minVariantPrice?.currencyCode || "USD",
         handle: product.handle,
+        imageUrl,
+        currentAltText,
         competitorData: competitorData
           ? {
               url: competitorData.url,

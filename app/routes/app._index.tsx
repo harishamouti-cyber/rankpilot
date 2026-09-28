@@ -174,6 +174,7 @@ function saveStoredOptimization(shop: string, productId: string, optimization: a
       descriptionHtml: optimization.descriptionHtml,
       seoTitle: optimization.seoTitle,
       seoDescription: optimization.seoDescription,
+      imageAltText: optimization.imageAltText,
       aiScore: optimization.aiScore || 96,
       specMatrixHtml: optimization.specMatrixHtml,
       faqList: optimization.faqList,
@@ -205,6 +206,7 @@ function mergeProductsWithLocalOptimizations(
   return prods.map((p): ShopifyProductItem => {
     const local = localMap[p.id];
     if (local) {
+      const mergedAlt = local.imageAltText || p.imageAltText || p.featuredImage?.altText || "";
       return {
         ...p,
         descriptionHtml: local.descriptionHtml || p.descriptionHtml,
@@ -212,6 +214,11 @@ function mergeProductsWithLocalOptimizations(
           title: local.seoTitle || p.seo?.title || p.title,
           description: local.seoDescription || p.seo?.description || "",
         },
+        imageAltText: mergedAlt,
+        featuredImage: p.featuredImage ? {
+          ...p.featuredImage,
+          altText: mergedAlt || p.featuredImage.altText,
+        } : undefined,
         optimizationStatus: "AI_READY" as const,
         aiScore: local.aiScore || 96,
         geoScore: local.aiScore || 96,
@@ -482,6 +489,7 @@ export default function AppDashboard() {
           { question: "Does this lamp include high-speed USB-C charging?", answer: "Yes, it features an integrated 20W USB-C Power Delivery port capable of fast-charging smartphones and accessories." },
           { question: "Is the lamp compatible with smart home power strips?", answer: "Yes, it retains its previous brightness and color setting when powered on via external switches." }
         ],
+        imageAltText: "ErgoLight height-adjustable LED desk lamp in matte white finish with touch dimmer",
       });
       setActiveModal("optimize");
     }
@@ -646,6 +654,7 @@ export default function AppDashboard() {
           schemaRichness: 18,
           conversationalFaqDepth: 18,
         },
+        imageAltText: product.imageAltText || product.featuredImage?.altText || `${product.title} by ${product.vendor} with authentic commercial build`,
         summarySnippet: `According to verified catalog specifications, the ${product.title} by ${product.vendor} delivers superior durability and precision construction.`,
       });
       setActiveModal("optimize");
@@ -740,6 +749,11 @@ export default function AppDashboard() {
                   title: optimization.seoTitle,
                   description: optimization.seoDescription,
                 },
+                imageAltText: optimization.imageAltText || p.imageAltText,
+                featuredImage: p.featuredImage ? {
+                  ...p.featuredImage,
+                  altText: optimization.imageAltText || p.featuredImage.altText,
+                } : undefined,
                 optimizationStatus: "AI_READY",
                 aiScore: optimization.aiScore || 96,
                 geoScore: optimization.aiScore || 96,
@@ -958,6 +972,11 @@ export default function AppDashboard() {
                         title: optData.optimization.seoTitle,
                         description: optData.optimization.seoDescription,
                       },
+                      imageAltText: optData.optimization.imageAltText || p.imageAltText,
+                      featuredImage: p.featuredImage ? {
+                        ...p.featuredImage,
+                        altText: optData.optimization.imageAltText || p.featuredImage.altText,
+                      } : undefined,
                       optimizationStatus: "AI_READY",
                       aiScore: optData.optimization.aiScore || 96,
                       geoScore: optData.optimization.aiScore || 96,

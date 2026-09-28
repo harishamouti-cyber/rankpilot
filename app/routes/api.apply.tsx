@@ -81,6 +81,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       shopifySynced: result.shopifySynced ?? false,
       warning: result.warning,
       updatedDescriptionHtml: result.descriptionHtml,
+      imageAltText: optimization.imageAltText,
       indexNowPinged: autoPing,
       indexNowResult,
     });

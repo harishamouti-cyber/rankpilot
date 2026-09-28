@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { db } from "~/db.server";
+import { generateSmartFallbackAltText } from "./vision.server";
 
 export interface OptimizationResult {
   seoTitle: string;
@@ -8,6 +9,7 @@ export interface OptimizationResult {
   specMatrixHtml: string;
   faqList: Array<{ question: string; answer: string }>;
   schemaJson: Record<string, any>;
+  imageAltText: string;
   aiScore: number;
   scoreBreakdown: {
     titleOptimization: number;
@@ -44,6 +46,8 @@ export interface ProductInput {
   price?: string;
   currency?: string;
   handle?: string;
+  imageUrl?: string;
+  currentAltText?: string;
   competitorData?: {
     url: string;
     title?: string;
@@ -191,6 +195,8 @@ Product Input Data:
 - Product Type / Category: ${product.productType || "General Merchandise"}
 - Tags: ${(product.tags || []).join(", ")}
 - Price: ${product.price || "49.99"} ${product.currency || "USD"}
+${product.imageUrl ? `- Product Image URL: ${product.imageUrl}` : ""}
+${product.currentAltText ? `- Current Image Alt Text: ${product.currentAltText}` : ""}
 ${
   product.competitorData
     ? `
@@ -208,12 +214,13 @@ Generate a strictly valid JSON response with the following keys:
 3. "specMatrixHtml": Clean HTML <table> with classes for Google AI Overview spec citation. Include columns for "Feature/Specification" and "Details" with rows for: Dimensions, Primary Materials, Key Features, Category / Best For, Warranty & Care. No markdown formatting inside the string, just semantic <table><thead>...<tbody>...</table>.
 4. "faqList": Array of exactly 3 objects: [{"question": "...", "answer": "..."}] answering natural, high-intent buyer objections for conversational search (e.g. sizing, durability, warranty).
 5. "schemaJson": Complete JSON-LD schema for Schema.org/Product, including offers, priceCurrency, price, itemAvailability, and shippingDetails.
-6. "aiScore": Number 94-98 representing calculated AI Readiness Score.
-7. "scoreBreakdown": Object with numbers (18-20 each) for "titleOptimization", "metaDescriptionQuality", "specMatrixCompleteness", "schemaRichness", "conversationalFaqDepth".
-8. "summarySnippet": A 2-sentence conversational citation summary tailored for Google AI Overviews and ChatGPT Search.
+6. "imageAltText": Entity-grounded, accessibility & GEO image alt text strictly under 125 characters. Accurately describe the product's physical appearance, primary color, materials, and key feature for Google Images and Generative AI visual search. NEVER start with "image of", "photo of", or "picture of".
+7. "aiScore": Number 94-98 representing calculated AI Readiness Score.
+8. "scoreBreakdown": Object with numbers (18-20 each) for "titleOptimization", "metaDescriptionQuality", "specMatrixCompleteness", "schemaRichness", "conversationalFaqDepth".
+9. "summarySnippet": A 2-sentence conversational citation summary tailored for Google AI Overviews and ChatGPT Search.
 ${
   product.competitorData
-    ? `9. "competitorGapAnalysis": Object with "identifiedKeywords" (string[]), "missingEntities" (string[]), and "closingStrategy" (string).`
+    ? `10. "competitorGapAnalysis": Object with "identifiedKeywords" (string[]), "missingEntities" (string[]), and "closingStrategy" (string).`
     : ""
 }
 `;
@@ -267,6 +274,19 @@ function sanitizeOptimizationResult(
     sanitizedDesc = `Upgrade with the ${cleanTitle}. Engineered with high-grade materials, precision fit & 1-year warranty. Fast tracked shipping today!`.slice(0, 155);
   }
 
+  let sanitizedAlt = typeof data.imageAltText === "string" && data.imageAltText.length > 0
+    ? stripDiagnosticWords(data.imageAltText)
+        .replace(/^(image|photo|picture)\s+of\s+/i, "")
+        .trim()
+        .slice(0, 124)
+    : (product.currentAltText && product.currentAltText.length >= 5 && !/raw|unoptimized/i.test(product.currentAltText))
+      ? product.currentAltText.slice(0, 124)
+      : generateSmartFallbackAltText(cleanTitle, brand);
+
+  if (/raw|unoptimized/i.test(sanitizedAlt) || sanitizedAlt.length < 5) {
+    sanitizedAlt = generateSmartFallbackAltText(cleanTitle, brand);
+  }
+
   return {
     seoTitle: sanitizedTitle,
     seoDescription: sanitizedDesc,
@@ -285,6 +305,7 @@ function sanitizeOptimizationResult(
       typeof data.schemaJson === "object" && data.schemaJson !== null
         ? data.schemaJson
         : generateDefaultSchema(product),
+    imageAltText: sanitizedAlt,
     aiScore:
       typeof data.aiScore === "number" && data.aiScore >= 90 && data.aiScore <= 100
         ? Math.round(data.aiScore)
@@ -315,6 +336,9 @@ export function generateSmartFallbackOptimization(product: ProductInput): Optimi
   const specMatrixHtml = generateDefaultSpecMatrix(product);
   const faqList = generateDefaultFaqs(product);
   const schemaJson = generateDefaultSchema(product);
+  const imageAltText = (product.currentAltText && product.currentAltText.length >= 5 && !/raw|unoptimized/i.test(product.currentAltText))
+    ? product.currentAltText.slice(0, 124)
+    : generateSmartFallbackAltText(cleanTitle, brand);
 
   const competitorGap = product.competitorData
     ? {
@@ -339,6 +363,7 @@ export function generateSmartFallbackOptimization(product: ProductInput): Optimi
     specMatrixHtml,
     faqList,
     schemaJson,
+    imageAltText,
     aiScore: 96,
     scoreBreakdown: {
       titleOptimization: 20,
@@ -429,6 +454,7 @@ function generateDefaultSchema(product: ProductInput): Record<string, any> {
   const cleanTitle = cleanCommercialProductTitle(product.title, product.vendor);
   const price = product.price || "49.99";
   const currency = product.currency || "USD";
+  const altText = product.currentAltText || `${cleanTitle} by ${product.vendor || "RankPilot"}`;
   return {
     "@context": "https://schema.org/",
     "@type": "Product",
@@ -437,6 +463,16 @@ function generateDefaultSchema(product: ProductInput): Record<string, any> {
       "@type": "Brand",
       "name": product.vendor || "RankPilot Partner Brand",
     },
+    ...(product.imageUrl
+      ? {
+          "image": {
+            "@type": "ImageObject",
+            "url": product.imageUrl,
+            "caption": altText,
+            "name": cleanTitle,
+          },
+        }
+      : {}),
     "description": product.descriptionHtml
       ? stripDiagnosticWords(product.descriptionHtml.replace(/<[^>]+>/g, "")).slice(0, 250)
       : `High-performance ${cleanTitle} engineered for maximum durability and everyday performance.`,

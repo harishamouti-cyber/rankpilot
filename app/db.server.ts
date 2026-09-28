@@ -68,11 +68,17 @@ export async function ensureDatabaseSchema() {
         "faqJson" TEXT,
         "schemaJson" TEXT,
         "aiOverviewPreview" TEXT,
+        "imageAltText" TEXT,
         "lastOptimizedAt" DATETIME,
         "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" DATETIME NOT NULL
       );
     `);
+
+    // Self-healing migration for ProductOptimization
+    try {
+      await db.$executeRawUnsafe(`ALTER TABLE "ProductOptimization" ADD COLUMN "imageAltText" TEXT;`);
+    } catch {}
 
     await db.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "StoreConfig" (
@@ -127,10 +133,16 @@ export async function ensureDatabaseSchema() {
         "seoTitleSnapshot" TEXT,
         "seoDescriptionSnapshot" TEXT,
         "metafieldsSnapshot" TEXT,
+        "altTextSnapshot" TEXT,
         "rolledBack" BOOLEAN NOT NULL DEFAULT false,
         "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    // Self-healing migration for RevisionHistory
+    try {
+      await db.$executeRawUnsafe(`ALTER TABLE "RevisionHistory" ADD COLUMN "altTextSnapshot" TEXT;`);
+    } catch {}
 
     await db.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "Session" (

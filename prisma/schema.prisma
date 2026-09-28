@@ -65,6 +65,7 @@ model ProductOptimization {
   faqJson           String?           // Serialized JSON of 3 conversational Q&As
   schemaJson        String?           // Serialized JSON-LD Product schema
   aiOverviewPreview String?           // Cached simulated AEO snippet
+  imageAltText      String?           // Entity-grounded SEO & GEO image alt text
   lastOptimizedAt   DateTime?
   revisions         RevisionHistory[]
   createdAt         DateTime          @default(now())
@@ -88,6 +89,7 @@ model RevisionHistory {
   seoTitleSnapshot      String?
   seoDescriptionSnapshot String?
   metafieldsSnapshot    String?
+  altTextSnapshot       String?              // Prior image alt text snapshot
   rolledBack            Boolean              @default(false)
   createdAt             DateTime             @default(now())
 }
