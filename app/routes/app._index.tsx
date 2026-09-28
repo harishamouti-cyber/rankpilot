@@ -1475,57 +1475,64 @@ export default function AppDashboard() {
         {/* ========================================================================= */}
         {unoptimizedProducts.length > 0 ? (
           <Card background="bg-surface-warning">
-            <InlineStack align="space-between" blockAlign="center">
-              <InlineStack gap="300" blockAlign="center">
-                <div
-                  style={{
-                    width: 14,
-                    height: 14,
-                    borderRadius: "50%",
-                    backgroundColor: "#f59e0b",
-                    boxShadow: "0 0 10px #f59e0b",
-                  }}
-                />
-                <BlockStack gap="050">
-                  <InlineStack gap="200" blockAlign="center">
-                    <Text as="h3" variant="headingSm" fontWeight="bold">
-                      Opportunity Radar: High Impact AI Citation Recovery
+            <BlockStack gap="300">
+              <InlineStack align="space-between" blockAlign="center" wrap>
+                <InlineStack gap="300" blockAlign="start">
+                  <div
+                    style={{
+                      width: 14,
+                      height: 14,
+                      borderRadius: "50%",
+                      backgroundColor: "#f59e0b",
+                      boxShadow: "0 0 10px #f59e0b",
+                      marginTop: 4,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <BlockStack gap="150">
+                    <InlineStack gap="200" blockAlign="center">
+                      <Text as="h3" variant="headingSm" fontWeight="bold">
+                        Opportunity Radar: High Impact AI Citation Recovery
+                      </Text>
+                      <Badge tone="warning" size="small">
+                        Action Required
+                      </Badge>
+                    </InlineStack>
+                    <Text as="p" variant="bodySm">
+                      {`${unoptimizedProducts.length} product${
+                        unoptimizedProducts.length > 1 ? "s have" : " has"
+                      } high search impressions but low AI visibility. Running 1-Click Optimization can recover estimated ${
+                        unoptimizedProducts.length * 225
+                      } monthly AI citations.`}
                     </Text>
-                    <Badge tone="warning" size="small">
-                      Action Required
-                    </Badge>
+                  </BlockStack>
+                </InlineStack>
+
+                <div style={{ marginTop: "14px" }}>
+                  <InlineStack gap="200" blockAlign="center">
+                    {strikingQueries.length > 0 && (
+                      <Button
+                        icon={TargetIcon}
+                        variant="secondary"
+                        size="slim"
+                        onClick={() => setIsStrikingModalOpen(true)}
+                      >
+                        {`Striking Queries (${strikingQueries.length})`}
+                      </Button>
+                    )}
+                    <Button
+                      icon={MagicIcon}
+                      variant="primary"
+                      size="slim"
+                      loading={isOptimizing}
+                      onClick={handleBulkOptimize}
+                    >
+                      {`Optimize Unready Products (${Math.max(unoptimizedProducts.length * 3, 6)}s)`}
+                    </Button>
                   </InlineStack>
-                  <Text as="p" variant="bodySm">
-                    {`${unoptimizedProducts.length} product${
-                      unoptimizedProducts.length > 1 ? "s have" : " has"
-                    } high search impressions but low AI visibility. Running 1-Click Optimization can recover estimated ${
-                      unoptimizedProducts.length * 225
-                    } monthly AI citations.`}
-                  </Text>
-                </BlockStack>
+                </div>
               </InlineStack>
-              <InlineStack gap="200" blockAlign="center">
-                {strikingQueries.length > 0 && (
-                  <Button
-                    icon={TargetIcon}
-                    variant="secondary"
-                    size="slim"
-                    onClick={() => setIsStrikingModalOpen(true)}
-                  >
-                    {`Striking Queries (${strikingQueries.length})`}
-                  </Button>
-                )}
-                <Button
-                  icon={MagicIcon}
-                  variant="primary"
-                  size="slim"
-                  loading={isOptimizing}
-                  onClick={handleBulkOptimize}
-                >
-                  {`Optimize Unready Products (${Math.max(unoptimizedProducts.length * 3, 6)}s)`}
-                </Button>
-              </InlineStack>
-            </InlineStack>
+            </BlockStack>
           </Card>
         ) : (
           <Card background="bg-surface-secondary">

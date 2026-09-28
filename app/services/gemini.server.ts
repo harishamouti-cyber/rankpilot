@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { db } from "~/db.server";
-import { generateSmartFallbackAltText } from "./vision.server";
+import { generateSmartFallbackAltText, smartTrimAltText } from "./vision.server";
 
 export interface OptimizationResult {
   seoTitle: string;
@@ -61,48 +61,19 @@ export interface ProductInput {
  * Transforms placeholders like "Raw unoptimized backpack 26L" into "Vanguard AeroVent 26L Ultra-Light EDC Backpack".
  */
 export function cleanCommercialProductTitle(rawTitle: string, vendor?: string): string {
-  if (!rawTitle) return "Premium Engineered Product";
+  if (!rawTitle) return "Premium Product";
 
-  const brand = vendor?.trim() || "";
-
-  // Dedicated mappings for specific catalog seed items
-  if (/backpack/i.test(rawTitle)) {
-    return brand ? `${brand} AeroVent 26L Ultra-Light EDC Backpack` : "AeroVent 26L Ultra-Light EDC Backpack";
-  }
-  if (/bottle|tumbler/i.test(rawTitle)) {
-    return brand ? `${brand} HydroFlow 32oz Insulated Thermal Tumbler` : "HydroFlow 32oz Insulated Thermal Tumbler";
-  }
-  if (/watch/i.test(rawTitle) && /band|strap/i.test(rawTitle)) {
-    return brand ? `${brand} Titanium Armor Apple Watch Ultra Band 49mm` : "Titanium Armor Apple Watch Ultra Band 49mm";
-  }
-  if (/charger|vent|mount/i.test(rawTitle)) {
-    return brand ? `${brand} QuantumGrip MagSafe Wireless Car Vent Charger 15W` : "QuantumGrip MagSafe Wireless Car Vent Charger 15W";
-  }
-  if (/headphone|audio/i.test(rawTitle)) {
-    return brand ? `${brand} Zenith ANC Wireless Noise-Cancelling Headphones` : "Zenith ANC Wireless Noise-Cancelling Headphones";
-  }
-
-  // General purge of diagnostic/raw markers
+  // General purge of diagnostic/raw markers without altering the merchant's real product name
   let cleaned = rawTitle
     .replace(/\b(raw|unoptimized|sample|test|demo|placeholder|draft|copy\s*of)\b/gi, "")
-    .replace(/[^\w\s-]/g, " ")
-    .replace(/\s+/g, " ")
+    .replace(/\s{2,}/g, " ")
     .trim();
 
   if (!cleaned) {
-    cleaned = "Premium Engineered Product";
+    cleaned = rawTitle.trim() || "Premium Product";
   }
 
-  // Ensure title starts with brand if available and not already present
-  if (brand && !cleaned.toLowerCase().includes(brand.toLowerCase())) {
-    cleaned = `${brand} ${cleaned}`;
-  }
-
-  // Proper title casing
-  return cleaned
-    .split(" ")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(" ");
+  return cleaned;
 }
 
 /**
@@ -275,16 +246,11 @@ function sanitizeOptimizationResult(
   }
 
   let sanitizedAlt = typeof data.imageAltText === "string" && data.imageAltText.length > 0
-    ? stripDiagnosticWords(data.imageAltText)
-        .replace(/^(image|photo|picture)\s+of\s+/i, "")
-        .trim()
-        .slice(0, 124)
-    : (product.currentAltText && product.currentAltText.length >= 5 && !/raw|unoptimized/i.test(product.currentAltText))
-      ? product.currentAltText.slice(0, 124)
-      : generateSmartFallbackAltText(cleanTitle, brand);
+    ? smartTrimAltText(stripDiagnosticWords(data.imageAltText), 124)
+    : generateSmartFallbackAltText(cleanTitle, brand, product.currentAltText);
 
   if (/raw|unoptimized/i.test(sanitizedAlt) || sanitizedAlt.length < 5) {
-    sanitizedAlt = generateSmartFallbackAltText(cleanTitle, brand);
+    sanitizedAlt = generateSmartFallbackAltText(cleanTitle, brand, product.currentAltText);
   }
 
   return {
@@ -327,31 +293,42 @@ function sanitizeOptimizationResult(
 
 export function generateSmartFallbackOptimization(product: ProductInput): OptimizationResult {
   const cleanTitle = cleanCommercialProductTitle(product.title, product.vendor);
-  const brand = product.vendor || "RankPilot Direct";
+  const brand = product.vendor || "RankPilot Partner";
 
-  const seoTitle = `${cleanTitle.slice(0, 42)} | ${brand}`.slice(0, 60);
-  const seoDescription =
-    `Upgrade with the ${cleanTitle}. Engineered with high-grade materials, precision fit & 1-year warranty. Free priority shipping on orders today!`.slice(0, 155);
+  const hasBrand = brand && cleanTitle.toLowerCase().includes(brand.toLowerCase());
+  const seoTitle = hasBrand
+    ? cleanTitle.slice(0, 60)
+    : `${cleanTitle.slice(0, 42)} | ${brand}`.slice(0, 60);
+
+  const rawDesc = (product.descriptionHtml || "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  let seoDescription = "";
+  if (rawDesc.length >= 35 && !/raw|unoptimized|placeholder/i.test(rawDesc)) {
+    seoDescription = smartTrimAltText(rawDesc, 150);
+  } else {
+    seoDescription = `Shop the authentic ${cleanTitle} by ${brand}. Verified high-grade materials, precision build & 1-year warranty. Fast tracked shipping today!`.slice(0, 155);
+  }
 
   const specMatrixHtml = generateDefaultSpecMatrix(product);
   const faqList = generateDefaultFaqs(product);
   const schemaJson = generateDefaultSchema(product);
-  const imageAltText = (product.currentAltText && product.currentAltText.length >= 5 && !/raw|unoptimized/i.test(product.currentAltText))
-    ? product.currentAltText.slice(0, 124)
-    : generateSmartFallbackAltText(cleanTitle, brand);
+  const imageAltText = generateSmartFallbackAltText(cleanTitle, brand, product.currentAltText);
 
   const competitorGap = product.competitorData
     ? {
         identifiedKeywords: [
-          "aerospace-grade aluminum",
-          "ergonomic grip",
-          "all-weather coating",
-          "TSA-compliant dimensions",
+          "verified authentic specifications",
+          "ergonomic precision build",
+          "all-weather durability",
+          "manufacturer warranty coverage",
         ],
         missingEntities: [
-          "Drop-tested impact resistance",
-          "Eco-conscious recycled alloy",
-          "Multi-compartment modular organizer",
+          "Independent quality testing validation",
+          "Verified commercial grade materials",
+          "Manufacturer direct customer support",
         ],
         closingStrategy: `Injected competitor high-intent comparison specs directly into the semantic table and conversational Q&A to win Google AI Overview citations against ${product.competitorData.url}.`,
       }
@@ -372,33 +349,64 @@ export function generateSmartFallbackOptimization(product: ProductInput): Optimi
       schemaRichness: 19,
       conversationalFaqDepth: 18,
     },
-    summarySnippet: `According to product testing and verified catalog specifications, the ${cleanTitle} by ${brand} delivers superior build durability, ergonomic design, and comprehensive warranty coverage compared to category alternatives.`,
+    summarySnippet: `According to verified catalog specifications, the ${cleanTitle} by ${brand} delivers superior build durability, precision craftsmanship, and comprehensive warranty coverage.`,
     competitorGapAnalysis: competitorGap,
   };
 }
 
 function generateDefaultSpecMatrix(product: ProductInput): string {
-  const category = product.productType || "Gear & Accessories";
-  const isBackpack = /backpack/i.test(product.title);
-  const isBottle = /bottle|tumbler/i.test(product.title);
+  const category = product.productType || "Gear & Equipment";
+  const cleanTitle = cleanCommercialProductTitle(product.title, product.vendor);
+  const isSnowboard = /\bsnowboard\b/i.test(cleanTitle);
+  const isBackpack = /\bbackpack\b/i.test(cleanTitle);
+  const isBottle = /\b(bottle|tumbler|mug)\b/i.test(cleanTitle);
+  const isFootwear = /\b(shoe|shoes|boot|boots|sneaker|sneakers)\b/i.test(cleanTitle);
+  const isApparel = /\b(shirt|t-shirt|hoodie|jacket|pants|shorts|apparel|sweater)\b/i.test(cleanTitle);
+  const isElectronics = /\b(headphone|audio|speaker|charger|mount|cable|electronics)\b/i.test(cleanTitle);
 
-  const dimensions = isBackpack
-    ? "19.5\" x 12.2\" x 7.5\" (26 Liters)"
-    : isBottle
-    ? "10.4\" Height x 3.6\" Diameter (32 oz / 950ml)"
-    : "11.8\" x 7.4\" x 2.2\" (Standard Form Factor)";
+  let dimensions = "Standard Commercial Form Factor with Precision Tolerances";
+  let materials = "Reinforced High-Grade Materials with Precision Assembly";
+  let keyFeatures = "Ergonomic build, verified retail durability, strict quality inspection";
+  let bestFor = `Daily commercial use, consumer lifestyle, ${category}`;
+  let warranty = "1-Year Comprehensive Manufacturer Warranty. Spot clean or wipe with damp cloth.";
 
-  const materials = isBackpack
-    ? "500D Cordura Nylon with DWR Weatherproof Coating"
-    : isBottle
-    ? "18/8 Pro-Grade Stainless Steel, BPA-Free Lid with N52 Magnets"
-    : "Reinforced Aerospace Composite & Matte Ballistic Alloy";
-
-  const keyFeatures = isBackpack
-    ? "Padded 16\" laptop compartment, luggage pass-through, YKK AquaGuard zippers"
-    : isBottle
-    ? "MagSafe phone mount lid, 24-hr cold insulation, zero-condensation grip"
-    : "IPX4 splash-proof, quick-access magnetic latch, anti-theft reinforcement";
+  if (isSnowboard) {
+    dimensions = "Multi-size directional camber profile (148cm - 162cm options)";
+    materials = "FSC-Certified Poplar & Paulownia Core, Triaxial Fiberglass & Sintered Race Base";
+    keyFeatures = "Tapered powder float nose, progressive carving sidecut, 360-degree steel impact edges";
+    bestFor = "All-Mountain Freeride, High-Speed Carving, Powder Flotation & Resort Terrain";
+    warranty = "3-Year Manufacturer Structural Warranty. Factory pre-tuned with biological wax.";
+  } else if (isBackpack) {
+    dimensions = "19.5\" x 12.2\" x 7.5\" (26 Liters Volume)";
+    materials = "500D Cordura Nylon with DWR Weatherproof Coating & YKK Zippers";
+    keyFeatures = "Padded 16\" laptop compartment, ergonomic air-mesh shoulder harness, luggage pass-through";
+    bestFor = `Daily commuter use, air travel carry-on, ${category}`;
+    warranty = "Lifetime Workmanship Warranty. Spot clean with damp cloth.";
+  } else if (isBottle) {
+    dimensions = "10.4\" Height x 3.6\" Diameter (32 oz / 950ml Capacity)";
+    materials = "18/8 Pro-Grade Stainless Steel, BPA-Free Insulated Lid with Silicone Seal";
+    keyFeatures = "Double-wall vacuum insulation (24hr cold / 12hr hot), condensation-free grip, wide mouth";
+    bestFor = `Active hydration, fitness, travel, ${category}`;
+    warranty = "Lifetime Manufacturer Limited Warranty. Hand wash recommended.";
+  } else if (isFootwear) {
+    dimensions = "Standard retail sizing with anatomical arch contouring";
+    materials = "Reinforced breathable composite upper with high-traction rubber outsole";
+    keyFeatures = "Shock-absorbing dual-density midsole, anti-slip multi-surface tread, reinforced heel counter";
+    bestFor = `All-day walking comfort, athletic performance, ${category}`;
+    warranty = "1-Year Manufacturer Warranty. Air dry after cleaning.";
+  } else if (isApparel) {
+    dimensions = "Standard retail fit with reinforced double-stitched seams";
+    materials = "Premium ring-spun combed fabric blend with pre-shrunk finish";
+    keyFeatures = "Double-needle stitching, breathable weave, soft hand-feel, color-fast dyeing";
+    bestFor = `Lifestyle wear, active comfort, ${category}`;
+    warranty = "30-Day satisfaction guarantee. Machine wash cold, tumble dry low.";
+  } else if (isElectronics) {
+    dimensions = "Compact ergonomic footprint engineered for standard device interfaces";
+    materials = "Anodized Aerospace-Grade Aluminum Alloy & Flame-Retardant Polycarbonate";
+    keyFeatures = "Thermal dissipation management, short-circuit protection, high-efficiency output";
+    bestFor = `Workspace productivity, everyday electronics, ${category}`;
+    warranty = "2-Year Manufacturer Hardware Warranty. Keep dry.";
+  }
 
   return `<table class="rankpilot-spec-matrix" style="width:100%; border-collapse: collapse; margin: 16px 0; font-size: 13px;">
   <thead>
@@ -422,11 +430,11 @@ function generateDefaultSpecMatrix(product: ProductInput): string {
     </tr>
     <tr style="border-bottom: 1px solid #e1e3e5;">
       <td style="padding: 10px 14px; font-weight: 500;">Category / Best For</td>
-      <td style="padding: 10px 14px;">Daily commuter use, travel organization, ${category}</td>
+      <td style="padding: 10px 14px;">${bestFor}</td>
     </tr>
     <tr style="border-bottom: 1px solid #e1e3e5;">
       <td style="padding: 10px 14px; font-weight: 500;">Warranty & Care</td>
-      <td style="padding: 10px 14px;">1-Year Limited Manufacturer Warranty. Spot clean with damp cloth.</td>
+      <td style="padding: 10px 14px;">${warranty}</td>
     </tr>
   </tbody>
 </table>`;

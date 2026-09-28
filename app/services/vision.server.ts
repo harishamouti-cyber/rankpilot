@@ -171,29 +171,73 @@ STRICT INSTRUCTIONS:
   }
 }
 
-export function generateSmartFallbackAltText(productTitle: string, vendor?: string): string {
-  const brand = vendor ? `${vendor} ` : "";
-  const cleanTitle = productTitle
-    .replace(/\b(raw|unoptimized|sample|test|demo)\b/gi, "")
+export function smartTrimAltText(text: string, maxLen = 124): string {
+  if (!text) return "";
+  const cleaned = text
+    .replace(/^(image|photo|picture)\s+of\s+/i, "")
+    .replace(/\s+/g, " ")
     .trim();
 
-  if (/backpack/i.test(cleanTitle)) {
-    return `${brand}AeroVent 26L EDC backpack in matte black weatherproof fabric`;
-  }
-  if (/watch/i.test(cleanTitle)) {
-    return `${brand}Titanium Apple Watch Ultra band with DLC scratch-resistant links`;
-  }
-  if (/bottle|tumbler/i.test(cleanTitle)) {
-    return `${brand}HydroFlow 32oz insulated stainless steel tumbler with magnetic lid`;
-  }
-  if (/charger|mount/i.test(cleanTitle)) {
-    return `${brand}QuantumGrip MagSafe wireless car vent charger 15W aluminum mount`;
-  }
-  if (/headphone/i.test(cleanTitle)) {
-    return `${brand}Zenith ANC wireless noise-cancelling headphones in space gray`;
+  if (cleaned.length <= maxLen) return cleaned;
+
+  // Find last period before maxLen
+  const lastPeriod = cleaned.lastIndexOf(". ", maxLen);
+  if (lastPeriod > 35) {
+    return cleaned.slice(0, lastPeriod + 1).trim();
   }
 
-  return `${brand}${cleanTitle} premium design shown with verified retail build`;
+  // Find last comma before maxLen
+  const lastComma = cleaned.lastIndexOf(", ", maxLen);
+  if (lastComma > 35) {
+    return cleaned.slice(0, lastComma).trim();
+  }
+
+  // Find last space before maxLen
+  const lastSpace = cleaned.lastIndexOf(" ", maxLen);
+  if (lastSpace > 35) {
+    return cleaned.slice(0, lastSpace).trim();
+  }
+
+  return cleaned.slice(0, maxLen).trim();
+}
+
+export function generateSmartFallbackAltText(
+  productTitle: string,
+  vendor?: string,
+  currentAltText?: string
+): string {
+  const brand = vendor ? `${vendor.trim()} ` : "";
+  const cleanTitle = productTitle
+    .replace(/\b(raw|unoptimized|sample|test|placeholder|demo)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim() || productTitle.trim();
+
+  // If product already has detailed alt text, preserve and smartly trim it without mid-word cuts
+  if (currentAltText && currentAltText.length >= 10 && !/raw|unoptimized|placeholder/i.test(currentAltText)) {
+    const trimmed = smartTrimAltText(currentAltText, 124);
+    if (trimmed.length >= 15) return trimmed;
+  }
+
+  if (/\bsnowboard\b/i.test(cleanTitle)) {
+    return `${brand}${cleanTitle} top and bottom graphic view with reinforced edges`.slice(0, 124);
+  }
+  if (/\bbackpack\b/i.test(cleanTitle)) {
+    return `${brand}${cleanTitle} in weather-resistant exterior with ergonomic straps`.slice(0, 124);
+  }
+  if (/\b(bottle|tumbler)\b/i.test(cleanTitle)) {
+    return `${brand}${cleanTitle} vacuum insulated tumbler with leakproof lid`.slice(0, 124);
+  }
+  if (/\bwatch\b/i.test(cleanTitle)) {
+    return `${brand}${cleanTitle} precision engineered watch with scratch-resistant finish`.slice(0, 124);
+  }
+  if (/\b(shoe|shoes|sneaker|sneakers|boot|boots)\b/i.test(cleanTitle)) {
+    return `${brand}${cleanTitle} premium footwear profile with durable traction sole`.slice(0, 124);
+  }
+  if (/\b(shirt|hoodie|jacket|apparel)\b/i.test(cleanTitle)) {
+    return `${brand}${cleanTitle} premium fabric construction in retail presentation`.slice(0, 124);
+  }
+
+  return `${brand}${cleanTitle} authentic catalog view with verified materials`.slice(0, 124);
 }
 
 /**
