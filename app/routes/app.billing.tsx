@@ -16,15 +16,18 @@ import {
   Icon,
 } from "@shopify/polaris";
 import { CheckIcon, CreditCardIcon } from "@shopify/polaris-icons";
-import { getCurrentPlan, confirmShopPlan, cancelAppSubscription, PLANS, PlanDefinition } from "~/services/billing.server";
+import { getCurrentPlan, confirmShopPlan, cancelAppSubscription, verifyActiveSubscription, PLANS, PlanDefinition } from "~/services/billing.server";
 import { authenticate } from "~/shopify.server";
 import { db } from "~/db.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   let shop = url.searchParams.get("shop") || "demo.myshopify.com";
+  let adminClient: any = null;
+
   try {
     const auth = await authenticate.admin(request);
+    adminClient = auth.admin;
     if (auth.session?.shop) {
       shop = auth.session.shop;
     }
@@ -37,9 +40,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     await confirmShopPlan(shop, "PRO", chargeId || undefined);
   }
 
+  // Dynamically verify active subscription against Shopify GraphQL
+  const verifiedSub = await verifyActiveSubscription(shop, adminClient);
+
   const currentPlan = await getCurrentPlan(shop);
   const setting = await db.appSetting.findUnique({ where: { shop } });
-  const hasActiveSubscription = Boolean(setting?.subscriptionId && setting?.status === "ACTIVE");
+  const hasActiveSubscription = verifiedSub.hasActiveSubscription || Boolean(setting?.subscriptionId && setting?.status === "ACTIVE");
 
   return json({
     shop,

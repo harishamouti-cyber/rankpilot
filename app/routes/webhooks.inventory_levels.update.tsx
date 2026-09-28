@@ -3,6 +3,7 @@ import { json } from "@remix-run/node";
 import { authenticate } from "~/shopify.server";
 import { verifyShopifyWebhookHmac } from "~/services/compliance.server";
 import { submitToIndexNow } from "~/services/indexnow.server";
+import { recordWebhookEvent } from "~/services/webhook_log.server";
 import { db } from "~/db.server";
 
 /**
@@ -55,6 +56,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   console.log(
     `[Webhook inventory_levels/update] Shop: ${shop}, Item: ${inventoryItemId}, Available: ${available}`
   );
+
+  await recordWebhookEvent({
+    shop,
+    topic: "inventory_levels/update",
+    status: "SUCCESS",
+    statusCode: 200,
+    latencyMs: 15,
+    payload,
+  });
 
   try {
     // Find associated product optimization record

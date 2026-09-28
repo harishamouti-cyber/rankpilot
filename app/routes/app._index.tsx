@@ -293,7 +293,7 @@ export default function AppDashboard() {
   const [metrics, setMetrics] = useState(initialMetrics);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const PAGE_SIZE = 25;
+  const PAGE_SIZE = 20;
   const [isPending, startTransition] = useTransition();
   const [isSyncingStore, setIsSyncingStore] = useState(false);
 
@@ -439,6 +439,15 @@ export default function AppDashboard() {
   // Toast / notification banner
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastTone, setToastTone] = useState<"success" | "critical" | "info">("success");
+
+  // 3-second auto-dismiss for floating toast notifications
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = setTimeout(() => {
+      setToastMessage(null);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [toastMessage]);
 
   // Active product modals state
   const [activeModal, setActiveModal] = useState<"optimize" | "competitor" | "revisions" | "settings" | null>(null);
@@ -616,6 +625,13 @@ export default function AppDashboard() {
       return 0;
     });
   }, [products, selectedStatusTab, searchQuery, sortSelected]);
+
+  // Tab & Filter Sync: Whenever merchant switches tabs, searches, or sorts, reset currentPage to 1
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedStatusTab, searchQuery, sortSelected]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
 
   const paginatedProducts = useMemo(() => {
     return filteredProducts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -1236,42 +1252,42 @@ export default function AppDashboard() {
         {/* GEO Score */}
         <IndexTable.Cell>
           <BlockStack gap="100">
-            <InlineStack gap="100" blockAlign="center">
-              <Text as="span" variant="bodyMd" fontWeight="bold">
-                {displayScore}/100
-              </Text>
-              <Badge tone={isOptimized ? "success" : "critical"} size="small">
-                {isOptimized ? "AI Ready" : "Unranked"}
-              </Badge>
-            </InlineStack>
-            <div style={{ width: 90 }}>
+            <Text as="span" variant="bodyMd" fontWeight="bold">
+              {displayScore}/100
+            </Text>
+            <div style={{ width: 80 }}>
               <ProgressBar
                 progress={displayScore}
-                tone={isOptimized ? "success" : "critical"}
+                tone={isOptimized ? "success" : "highlight"}
                 size="small"
               />
             </div>
           </BlockStack>
         </IndexTable.Cell>
 
-        {/* Status Badge */}
+        {/* Minimalist 6px Status Dot & Label (Eliminates Badge Soup) */}
         <IndexTable.Cell>
-          {isOptimized ? (
-            <Badge tone="success" progress="complete">
-              AI &amp; Google Ready
-            </Badge>
-          ) : (
-            <Badge tone="critical" progress="incomplete">
-              Needs Optimization
-            </Badge>
-          )}
+          <InlineStack gap="150" blockAlign="center">
+            <div
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                backgroundColor: isOptimized ? "#10b981" : "#f59e0b",
+                flexShrink: 0,
+              }}
+            />
+            <Text as="span" variant="bodySm" tone="subdued">
+              {isOptimized ? "AI & Google Ready" : "Needs Optimization"}
+            </Text>
+          </InlineStack>
         </IndexTable.Cell>
 
-        {/* Dedicated Actions Column with View Diff and Popover ActionList */}
+        {/* Dedicated Actions Column with Lightweight Secondary Outline Button */}
         <IndexTable.Cell>
           <InlineStack gap="200" wrap={false} blockAlign="center">
             <Button
-              variant="primary"
+              variant="secondary"
               size="slim"
               loading={isOptimizing && selectedProduct?.id === product.id}
               onClick={() => handleOpenOptimizationOrOptimize(product)}
@@ -1346,15 +1362,10 @@ export default function AppDashboard() {
           style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: "10px",
-            flexWrap: "wrap",
             verticalAlign: "middle",
-            maxWidth: "100%",
           }}
         >
           <img src="/app-icon.png" alt="RankPilot" style={{ width: 28, height: 28, borderRadius: 6, verticalAlign: "middle" }} />
-          <Badge tone="info">{`Plan: ${setting.plan}`}</Badge>
-          <Badge tone="success">0ms Storefront Impact</Badge>
         </div>
       }
       primaryAction={{
@@ -1432,14 +1443,42 @@ export default function AppDashboard() {
     >
       <BlockStack gap="500">
         {toastMessage && (
-          <Banner
-            tone={toastTone === "critical" ? "critical" : toastTone === "info" ? "info" : "success"}
-            onDismiss={() => setToastMessage(null)}
+          <div
+            style={{
+              position: "fixed",
+              bottom: 24,
+              right: 24,
+              zIndex: 9999,
+              backgroundColor: toastTone === "critical" ? "#b91c1c" : toastTone === "info" ? "#1d4ed8" : "#0f172a",
+              color: "#ffffff",
+              padding: "12px 18px",
+              borderRadius: "8px",
+              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2)",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              fontSize: "14px",
+              fontWeight: 500,
+              maxWidth: "460px",
+            }}
           >
-            <Text as="p" variant="bodyMd">
-              {toastMessage}
-            </Text>
-          </Banner>
+            <span style={{ flex: 1 }}>{toastMessage}</span>
+            <button
+              onClick={() => setToastMessage(null)}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "#94a3b8",
+                cursor: "pointer",
+                padding: "2px",
+                fontSize: "18px",
+                lineHeight: 1,
+              }}
+              aria-label="Dismiss toast"
+            >
+              ×
+            </button>
+          </div>
         )}
 
         {/* Schema Drift Sentinel Warning Banner */}
@@ -1513,8 +1552,8 @@ export default function AppDashboard() {
                   </BlockStack>
                 </InlineStack>
 
-                <div style={{ marginTop: "14px" }}>
-                  <InlineStack gap="200" blockAlign="center">
+                <div style={{ marginTop: 16 }}>
+                  <InlineStack gap="300" blockAlign="center">
                     {strikingQueries.length > 0 && (
                       <Button
                         icon={TargetIcon}
@@ -1671,7 +1710,6 @@ export default function AppDashboard() {
                       <Text as="p" variant="bodySm" tone="subdued">
                         INDEXNOW PINGS
                       </Text>
-                      <Badge tone="info">Instant Crawl</Badge>
                     </InlineStack>
                     <Text as="h2" variant="headingXl" fontWeight="bold">
                       {metrics.indexPingsCount}
@@ -1707,7 +1745,6 @@ export default function AppDashboard() {
                       <Text as="p" variant="bodySm" tone="subdued">
                         STORED SNAPSHOTS
                       </Text>
-                      <Badge tone="success">1-Click Undo</Badge>
                     </InlineStack>
                     <Text as="h2" variant="headingXl" fontWeight="bold">
                       {metrics.storedRevisionsCount}
@@ -1863,12 +1900,12 @@ export default function AppDashboard() {
                 { title: "Actions" },
               ]}
               pagination={{
-                hasNext: currentPage * PAGE_SIZE < filteredProducts.length,
+                hasNext: currentPage < totalPages,
                 hasPrevious: currentPage > 1,
-                onNext: () => setCurrentPage((prev) => prev + 1),
+                onNext: () => setCurrentPage((prev) => Math.min(totalPages, prev + 1)),
                 onPrevious: () => setCurrentPage((prev) => Math.max(1, prev - 1)),
                 label: filteredProducts.length > 0
-                  ? `${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(currentPage * PAGE_SIZE, filteredProducts.length)} of ${filteredProducts.length} products`
+                  ? `${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, filteredProducts.length)} of ${filteredProducts.length} products`
                   : "0 products",
               }}
               promotedBulkActions={[
@@ -1880,8 +1917,71 @@ export default function AppDashboard() {
             >
               {rowMarkup}
             </IndexTable>
+
+            {totalPages > 1 && (
+              <Box padding="300" borderBlockStartWidth="025" borderColor="border">
+                <InlineStack align="space-between" blockAlign="center">
+                  <Text as="span" variant="bodySm" tone="subdued">
+                    {`Showing ${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(
+                      currentPage * PAGE_SIZE,
+                      filteredProducts.length
+                    )} of ${filteredProducts.length} products (Page ${currentPage} of ${totalPages})`}
+                  </Text>
+                  <InlineStack gap="100" blockAlign="center">
+                    <Button
+                      size="slim"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    >
+                      Previous
+                    </Button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                      .reduce<(number | string)[]>((acc, p, idx, arr) => {
+                        if (idx > 0 && typeof arr[idx - 1] === "number" && (p as number) - (arr[idx - 1] as number) > 1) {
+                          acc.push("...");
+                        }
+                        acc.push(p);
+                        return acc;
+                      }, [])
+                      .map((p, idx) =>
+                        typeof p === "string" ? (
+                          <Text key={`ellipsis-${idx}`} as="span" variant="bodySm" tone="subdued">
+                            ...
+                          </Text>
+                        ) : (
+                          <Button
+                            key={`page-${p}`}
+                            size="slim"
+                            variant={currentPage === p ? "primary" : "secondary"}
+                            onClick={() => setCurrentPage(p)}
+                          >
+                            {String(p)}
+                          </Button>
+                        )
+                      )}
+                    <Button
+                      size="slim"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    >
+                      Next
+                    </Button>
+                  </InlineStack>
+                </InlineStack>
+              </Box>
+            )}
           </BlockStack>
         </Card>
+
+        {/* 1-Line Subtle Architectural Trust Indicator */}
+        <Box paddingBlock="300">
+          <InlineStack align="center">
+            <Text as="p" variant="bodySm" tone="subdued">
+              Pure Metafield Architecture • 0ms Storefront Liquid / ScriptTag Footprint
+            </Text>
+          </InlineStack>
+        </Box>
       </BlockStack>
 
       {/* ========================================================================= */}
@@ -1902,6 +2002,7 @@ export default function AppDashboard() {
         shop={shop}
         onApply={handleApplyOptimization}
         onRevert={handleRollback}
+        onRegenerate={handleTriggerOptimize}
       />
 
       {/* ========================================================================= */}

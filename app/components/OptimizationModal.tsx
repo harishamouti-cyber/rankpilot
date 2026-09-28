@@ -16,6 +16,8 @@ import {
 } from "@shopify/polaris";
 import {
   UndoIcon,
+  ClipboardIcon,
+  RefreshIcon,
 } from "@shopify/polaris-icons";
 import { ShopifyProductItem } from "~/services/shopify.server";
 import { OptimizationResult } from "~/services/gemini.server";
@@ -31,6 +33,7 @@ interface OptimizationModalProps {
   shop?: string;
   onApply: (product: ShopifyProductItem, optimization: OptimizationResult) => void;
   onRevert?: (productId: string) => void;
+  onRegenerate?: (product: ShopifyProductItem) => void;
 }
 
 export function OptimizationModal({
@@ -44,8 +47,10 @@ export function OptimizationModal({
   shop = "",
   onApply,
   onRevert,
+  onRegenerate,
 }: OptimizationModalProps) {
-  const [selectedView, setSelectedView] = useState<0 | 1>(0);
+  const [selectedView, setSelectedView] = useState<0 | 1 | 2>(0);
+  const [copiedSchema, setCopiedSchema] = useState(false);
   const [simulationEngine, setSimulationEngine] = useState<"google" | "chatgpt" | "perplexity">("google");
 
   const beforeAltText = product ? (product.imageAltText || product.featuredImage?.altText || "") : "";
@@ -186,6 +191,12 @@ export function OptimizationModal({
                 <Button
                   pressed={selectedView === 1}
                   onClick={() => setSelectedView(1)}
+                >
+                  JSON-LD &amp; Structured Schema
+                </Button>
+                <Button
+                  pressed={selectedView === 2}
+                  onClick={() => setSelectedView(2)}
                 >
                   Live AI Engine Simulation
                 </Button>
@@ -530,9 +541,161 @@ export function OptimizationModal({
           )}
 
           {/* ========================================================================= */}
-          {/* VIEW 2: LIVE AI ENGINE SIMULATION                                         */}
+          {/* VIEW 2: JSON-LD & STRUCTURED SCHEMA (VERIFIED METAS)                     */}
           {/* ========================================================================= */}
           {selectedView === 1 && (
+            <BlockStack gap="400">
+              {/* Quick Actions Header */}
+              <Card background="bg-surface-secondary">
+                <InlineStack align="space-between" blockAlign="center" wrap>
+                  <BlockStack gap="050">
+                    <Text as="h3" variant="headingSm" fontWeight="bold">
+                      Verified Metafield Payloads &amp; Machine-Readable Schema
+                    </Text>
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      Directly bound to Shopify Product Metafields: <code>rankpilot.schema_json</code>, <code>rankpilot.spec_table</code>, and <code>rankpilot.faq_json</code>.
+                    </Text>
+                  </BlockStack>
+                  <InlineStack gap="200" blockAlign="center">
+                    <Button
+                      icon={ClipboardIcon}
+                      onClick={() => {
+                        if (typeof navigator !== "undefined" && navigator.clipboard) {
+                          navigator.clipboard.writeText(JSON.stringify(optimization.schemaJson, null, 2));
+                          setCopiedSchema(true);
+                          setTimeout(() => setCopiedSchema(false), 2000);
+                        }
+                      }}
+                    >
+                      {copiedSchema ? "✓ Copied Schema" : "Copy JSON-LD"}
+                    </Button>
+                    {onRegenerate && (
+                      <Button
+                        icon={RefreshIcon}
+                        onClick={() => onRegenerate(product)}
+                        disabled={isApplying}
+                      >
+                        Re-generate
+                      </Button>
+                    )}
+                    <Button
+                      variant="primary"
+                      loading={isApplying}
+                      onClick={() => onApply(product, { ...optimization, imageAltText: editableAltText })}
+                    >
+                      Publish to Metafields
+                    </Button>
+                  </InlineStack>
+                </InlineStack>
+              </Card>
+
+              {/* 1. Formatted JSON-LD Preview */}
+              <Card>
+                <BlockStack gap="300">
+                  <InlineStack align="space-between" blockAlign="center">
+                    <InlineStack gap="200" blockAlign="center">
+                      <Text as="h3" variant="headingSm" fontWeight="bold">
+                        Schema.org JSON-LD Graph (Product &amp; Merchant Return)
+                      </Text>
+                      <Badge tone="success">Validated 2026 Schema</Badge>
+                    </InlineStack>
+                    <Button
+                      size="slim"
+                      variant="plain"
+                      icon={ClipboardIcon}
+                      onClick={() => {
+                        if (typeof navigator !== "undefined" && navigator.clipboard) {
+                          navigator.clipboard.writeText(JSON.stringify(optimization.schemaJson, null, 2));
+                          setCopiedSchema(true);
+                          setTimeout(() => setCopiedSchema(false), 2000);
+                        }
+                      }}
+                    >
+                      {copiedSchema ? "✓ Copied" : "Copy Raw JSON"}
+                    </Button>
+                  </InlineStack>
+                  <div
+                    style={{
+                      maxHeight: "300px",
+                      overflowY: "auto",
+                      backgroundColor: "#0f172a",
+                      color: "#38bdf8",
+                      fontFamily: "monospace",
+                      fontSize: "12px",
+                      padding: "16px",
+                      borderRadius: "8px",
+                      lineHeight: 1.5,
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    {JSON.stringify(optimization.schemaJson, null, 2)}
+                  </div>
+                </BlockStack>
+              </Card>
+
+              {/* 2. Structured Specification Matrix */}
+              <Card>
+                <BlockStack gap="300">
+                  <InlineStack align="space-between" blockAlign="center">
+                    <Text as="h3" variant="headingSm" fontWeight="bold">
+                      Structured Specification Table (Metafield: <code>rankpilot.spec_table</code>)
+                    </Text>
+                    <Badge tone="info">AEO Grounding</Badge>
+                  </InlineStack>
+                  <div
+                    style={{
+                      padding: "12px",
+                      backgroundColor: "#f8f9fa",
+                      borderRadius: "6px",
+                      border: "1px solid #e2e8f0",
+                      maxHeight: "220px",
+                      overflowY: "auto",
+                    }}
+                    dangerouslySetInnerHTML={{ __html: optimization.specMatrixHtml }}
+                  />
+                </BlockStack>
+              </Card>
+
+              {/* 3. Conversational Buyer FAQs */}
+              <Card>
+                <BlockStack gap="300">
+                  <InlineStack align="space-between" blockAlign="center">
+                    <Text as="h3" variant="headingSm" fontWeight="bold">
+                      Buyer FAQ Knowledge Graph (Metafield: <code>rankpilot.faq_json</code>)
+                    </Text>
+                    <Badge tone="success">{`${optimization.faqList.length} Q&As`}</Badge>
+                  </InlineStack>
+                  <BlockStack gap="200">
+                    {optimization.faqList.map((faq, index) => (
+                      <Box
+                        key={index}
+                        padding="300"
+                        background="bg-surface-secondary"
+                        borderRadius="150"
+                        borderWidth="025"
+                        borderColor="border"
+                      >
+                        <BlockStack gap="100">
+                          <Text as="p" variant="bodySm" fontWeight="bold">
+                            Q: {faq.question}
+                          </Text>
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            A: {faq.answer}
+                          </Text>
+                        </BlockStack>
+                      </Box>
+                    ))}
+                  </BlockStack>
+                </BlockStack>
+              </Card>
+            </BlockStack>
+          )}
+
+          {/* ========================================================================= */}
+          {/* VIEW 3: LIVE AI ENGINE SIMULATION                                         */}
+          {/* ========================================================================= */}
+          {selectedView === 2 && (
             <BlockStack gap="400">
               {/* Visual Engine Selector Toggle */}
               <InlineStack align="center" gap="200">

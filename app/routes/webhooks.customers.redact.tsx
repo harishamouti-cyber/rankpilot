@@ -38,7 +38,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       shop = payload.shop_domain || fallbackReq.headers.get("X-Shopify-Shop-Domain") || "demo.myshopify.com";
     }
 
-    const response = await handleCustomerRedact(payload);
+    const response = await handleCustomerRedact(payload, shop);
     return json(response, { status: 200 });
   } catch (error) {
     if (error instanceof Response) {

@@ -143,7 +143,15 @@ export default function CitationsPage() {
   const metrics: CitationMetricsSummary = fetcher.data?.metrics || initialMetrics;
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [selectedResources, setSelectedResources] = useState<string[]>([]);
+
+  // 3-second auto-dismiss for citations toast
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = setTimeout(() => {
+      setToastMessage(null);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [toastMessage]);
 
   useEffect(() => {
     if (fetcher.data?.success) {
@@ -157,18 +165,41 @@ export default function CitationsPage() {
     fetcher.submit({ intent: "run_audit" }, { method: "POST" });
   };
 
-  // Subtle neutral engine badges to avoid neon clutter
+  // Sleek monochrome engine badges with subtle indicators (21st.dev style)
   const getEngineBadge = (engine: string) => {
-    switch (engine) {
-      case "CHATGPT_SEARCH":
-        return <Badge>ChatGPT Search</Badge>;
-      case "PERPLEXITY":
-        return <Badge>Perplexity</Badge>;
-      case "GOOGLE_AI":
-        return <Badge>Google AI Overview</Badge>;
-      default:
-        return <Badge>AI Search</Badge>;
+    let label = "AI Search";
+    let iconChar = "✦";
+    if (engine === "CHATGPT_SEARCH") {
+      label = "ChatGPT Search";
+      iconChar = "●";
+    } else if (engine === "PERPLEXITY") {
+      label = "Perplexity";
+      iconChar = "◆";
+    } else if (engine === "GOOGLE_AI") {
+      label = "Google AI Overview";
+      iconChar = "✦";
     }
+
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "5px",
+          padding: "3px 8px",
+          borderRadius: "6px",
+          fontSize: "11px",
+          fontWeight: 500,
+          backgroundColor: "#f4f4f5",
+          border: "1px solid #e4e4e7",
+          color: "#27272a",
+          whiteSpace: "nowrap",
+        }}
+      >
+        <span style={{ fontSize: "9px", opacity: 0.7 }}>{iconChar}</span>
+        {label}
+      </span>
+    );
   };
 
   // Industry-standard SEO scoring colors
@@ -179,24 +210,6 @@ export default function CitationsPage() {
   const gaugeCircumference = 2 * Math.PI * gaugeRadius; // ~364.42
   const scorePercent = Math.min(100, Math.max(0, metrics.geoScore));
   const strokeOffset = gaugeCircumference * (1 - scorePercent / 100);
-
-  // Table selection
-  const allSelected =
-    metrics.citations.length > 0 && selectedResources.length === metrics.citations.length;
-
-  const toggleSelectAll = () => {
-    if (allSelected) {
-      setSelectedResources([]);
-    } else {
-      setSelectedResources(metrics.citations.map((_, i) => i.toString()));
-    }
-  };
-
-  const toggleSelect = (id: string) => {
-    setSelectedResources((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  };
 
   return (
     <Page
@@ -233,7 +246,6 @@ export default function CitationsPage() {
           >
             {`${metrics.geoScore} / 100 AI-Ready`}
           </span>
-          <Badge>0ms Speed Impact</Badge>
         </div>
       }
       backAction={{
@@ -249,11 +261,42 @@ export default function CitationsPage() {
     >
       <BlockStack gap="500">
         {toastMessage && (
-          <Banner tone="success" onDismiss={() => setToastMessage(null)}>
-            <Text as="p" variant="bodyMd">
-              {toastMessage}
-            </Text>
-          </Banner>
+          <div
+            style={{
+              position: "fixed",
+              bottom: 24,
+              right: 24,
+              zIndex: 9999,
+              backgroundColor: "#0f172a",
+              color: "#ffffff",
+              padding: "12px 18px",
+              borderRadius: "8px",
+              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2)",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              fontSize: "14px",
+              fontWeight: 500,
+              maxWidth: "460px",
+            }}
+          >
+            <span style={{ flex: 1 }}>{toastMessage}</span>
+            <button
+              onClick={() => setToastMessage(null)}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "#94a3b8",
+                cursor: "pointer",
+                padding: "2px",
+                fontSize: "18px",
+                lineHeight: 1,
+              }}
+              aria-label="Dismiss toast"
+            >
+              ×
+            </button>
+          </div>
         )}
 
         {/* TOP GEO SCORE & AI ENGINE READINESS HERO CARD */}
@@ -685,12 +728,11 @@ export default function CitationsPage() {
                   }}
                 >
                   <colgroup>
-                    <col style={{ width: "48px" }} />  {/* Checkbox */}
-                    <col style={{ width: "34%" }} />   {/* Shopper Query & Target Product */}
-                    <col style={{ width: "15%" }} />   {/* AI Search Engine */}
-                    <col style={{ width: "13%" }} />   {/* Citation Position */}
-                    <col style={{ width: "23%" }} />   {/* Cited Verification Snippet */}
-                    <col style={{ width: "15%" }} />   {/* Competitor Outranked */}
+                    <col style={{ width: "36%" }} />   {/* Shopper Query & Target Product */}
+                    <col style={{ width: "16%" }} />   {/* AI Search Engine */}
+                    <col style={{ width: "14%" }} />   {/* Citation Position */}
+                    <col style={{ width: "20%" }} />   {/* Cited Verification Snippet */}
+                    <col style={{ width: "14%" }} />   {/* Competitor Outranked */}
                   </colgroup>
                   <thead>
                     <tr
@@ -699,26 +741,6 @@ export default function CitationsPage() {
                         borderBottom: "1px solid var(--p-color-border-subdued, #E4E4E7)",
                       }}
                     >
-                      <th
-                        style={{
-                          padding: "12px 16px",
-                          width: "48px",
-                          verticalAlign: "middle",
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={allSelected}
-                          onChange={toggleSelectAll}
-                          style={{
-                            width: "16px",
-                            height: "16px",
-                            cursor: "pointer",
-                            accentColor: "#008060",
-                          }}
-                          aria-label="Select all citations"
-                        />
-                      </th>
                       <th
                         style={{
                           padding: "12px 16px",
@@ -783,40 +805,14 @@ export default function CitationsPage() {
                   </thead>
                   <tbody>
                     {metrics.citations.map((item: CitationItem, index: number) => {
-                      const isSelected = selectedResources.includes(index.toString());
                       return (
                         <tr
                           key={item.id || index}
                           style={{
                             borderBottom: "1px solid var(--p-color-border-subdued, #E4E4E7)",
-                            background: isSelected
-                              ? "var(--p-color-bg-surface-selected, #F1F2F4)"
-                              : "transparent",
                             transition: "background 0.15s ease",
                           }}
                         >
-                          {/* Checkbox */}
-                          <td
-                            style={{
-                              padding: "14px 16px",
-                              verticalAlign: "top",
-                              width: "48px",
-                            }}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => toggleSelect(index.toString())}
-                              style={{
-                                width: "16px",
-                                height: "16px",
-                                cursor: "pointer",
-                                accentColor: "#008060",
-                              }}
-                              aria-label={`Select ${item.query}`}
-                            />
-                          </td>
-
                           {/* Shopper Query & Real Target Product */}
                           <td
                             style={{

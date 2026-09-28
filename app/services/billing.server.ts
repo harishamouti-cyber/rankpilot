@@ -81,6 +81,78 @@ export const APP_SUBSCRIPTION_CANCEL_MUTATION = `#graphql
   }
 `;
 
+export const APP_ACTIVE_SUBSCRIPTIONS_QUERY = `#graphql
+  query getActiveAppSubscriptions {
+    appInstallation {
+      activeSubscriptions {
+        id
+        name
+        status
+        test
+        currentPeriodEnd
+        lineItems {
+          plan {
+            pricingDetails {
+              ... on AppRecurringPricing {
+                price {
+                  amount
+                  currencyCode
+                }
+                interval
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * Dynamically queries Shopify Admin GraphQL appInstallation.activeSubscriptions
+ * and synchronizes with local database.
+ */
+export async function verifyActiveSubscription(
+  shop: string = "demo.myshopify.com",
+  adminClient?: any
+): Promise<{ hasActiveSubscription: boolean; subscription: any | null; planTier: PlanId }> {
+  if (adminClient && typeof adminClient.graphql === "function") {
+    try {
+      const res = await adminClient.graphql(APP_ACTIVE_SUBSCRIPTIONS_QUERY);
+      const data = await res.json();
+      const activeSubs = data?.data?.appInstallation?.activeSubscriptions || [];
+      if (activeSubs.length > 0) {
+        const sub = activeSubs[0];
+        await db.appSetting.upsert({
+          where: { shop },
+          create: {
+            shop,
+            plan: "PRO",
+            status: "ACTIVE",
+            subscriptionId: sub.id,
+          },
+          update: {
+            plan: "PRO",
+            status: "ACTIVE",
+            subscriptionId: sub.id,
+          },
+        });
+        return { hasActiveSubscription: true, subscription: sub, planTier: "PRO" };
+      }
+    } catch (e: any) {
+      console.warn("[Billing] verifyActiveSubscription GraphQL check notice:", e.message);
+    }
+  }
+
+  const setting = await db.appSetting.findUnique({ where: { shop } });
+  const hasActive = Boolean(setting?.subscriptionId && setting?.status === "ACTIVE");
+  return {
+    hasActiveSubscription: hasActive,
+    subscription: setting?.subscriptionId ? { id: setting.subscriptionId, status: setting.status } : null,
+    planTier: "PRO",
+  };
+}
+
 /**
  * Returns the currently active plan for the merchant store.
  */
