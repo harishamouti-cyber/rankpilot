@@ -32,7 +32,6 @@ import {
   SearchIcon,
   SettingsIcon,
   ExportIcon,
-  CheckCircleIcon,
   CreditCardIcon,
   ChartLineIcon,
   PlayIcon,
@@ -1877,25 +1876,6 @@ export default function AppDashboard() {
               {rowMarkup}
             </IndexTable>
           </BlockStack>
-        </Card>
-
-        {/* Zero-Footprint Assurance Callout */}
-        <Card background="bg-surface-secondary">
-          <InlineStack align="space-between" blockAlign="center">
-            <InlineStack gap="300" blockAlign="center">
-              <CheckCircleIcon width={24} height={24} fill="#008060" />
-              <BlockStack gap="050">
-                <Text as="h3" variant="headingSm" fontWeight="bold">
-                  Zero Storefront Liquid / ScriptTag Footprint
-                </Text>
-                <Text as="p" variant="bodySm" tone="subdued">
-                  RankPilot operates 100% server-side using Shopify Admin GraphQL API and Metafields.
-                  Guaranteed 0ms impact on your Google Core Web Vitals and Lighthouse speed scores.
-                </Text>
-              </BlockStack>
-            </InlineStack>
-            <Badge tone="success">100% Core Web Vitals Safe</Badge>
-          </InlineStack>
         </Card>
       </BlockStack>
 
