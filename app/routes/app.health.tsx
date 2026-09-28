@@ -1,4 +1,4 @@
-import type { LoaderFunctionArgs } from "@remix-run/node";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData, useFetcher, useNavigate } from "@remix-run/react";
 import React, { useState, useEffect } from "react";
@@ -18,14 +18,22 @@ import {
 } from "@shopify/polaris";
 import {
   CheckCircleIcon,
-  AlertCircleIcon,
   RefreshIcon,
   DatabaseIcon,
   ShieldCheckMarkIcon,
-  ArrowLeftIcon,
 } from "@shopify/polaris-icons";
-import { auditCatalogForDrift, DriftAuditResult } from "~/services/drift_sentinel.server";
-import { authenticate } from "~/shopify.server";
+import { auditCatalogForDrift, repairDriftedProducts, DriftAuditResult } from "~/services/drift_sentinel.server";
+import {
+  verifyProductMetafieldDefinitions,
+  resyncMissingMetafieldDefinitions,
+  VerifiedMetafieldDefinition,
+} from "~/services/metafield_verifier.server";
+import {
+  getMonitoredWebhookStatuses,
+  WebhookStatusItem,
+} from "~/services/webhook_log.server";
+import { getShopifyProducts } from "~/services/shopify.server";
+import { authenticate, unauthenticated } from "~/shopify.server";
 import { db } from "~/db.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -39,140 +47,154 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     if (authResult.session?.shop) {
       shop = authResult.session.shop;
     }
-  } catch {
-    // Offline mode
+  } catch (error) {
+    if (error instanceof Response) throw error;
+    try {
+      const unauthResult = await unauthenticated.admin(shop);
+      adminClient = unauthResult.admin;
+    } catch {}
   }
 
+  // 1. Real Catalog Health & Counts
+  const products = await getShopifyProducts(shop, adminClient);
+  const totalProducts = products.length;
+  const isOptimized = (status: string) => status === "OPTIMIZED" || status === "AI_READY";
+  const syncedProducts = products.filter((p) => isOptimized(p.optimizationStatus));
+  const syncedCount = syncedProducts.length;
+  const pendingCount = Math.max(0, totalProducts - syncedCount);
+
+  // 2. Real Metafield Verification via GraphQL
+  const metafieldCheck = await verifyProductMetafieldDefinitions(adminClient);
+
+  // 3. Real Schema Integrity / Drift Audit
   const driftAudit = await auditCatalogForDrift(shop, adminClient);
+
+  // 4. Honest Webhook Delivery Logs from Database
+  const webhooks = await getMonitoredWebhookStatuses(shop);
+
+  // 5. Activity Log
   const autopilotLogs = await db.autopilotLog.findMany({
     where: { shop },
     orderBy: { timestamp: "desc" },
-    take: 6,
+    take: 8,
   });
 
   return json({
     shop,
+    totalProducts,
+    syncedCount,
+    pendingCount,
     driftAudit,
+    metafieldCheck,
+    webhooks,
     autopilotLogs: autopilotLogs.map((log) => ({
       id: log.id,
       actionType: log.actionType,
       details: log.details,
       timestamp: log.timestamp.toISOString(),
     })),
-    webhooks: [
-      {
-        topic: "products/update",
-        status: "ACTIVE",
-        latency: "42ms",
-        lastDelivered: "Just now",
-        code: 200,
-      },
-      {
-        topic: "inventory_levels/update",
-        status: "ACTIVE",
-        latency: "38ms",
-        lastDelivered: "2 mins ago",
-        code: 200,
-      },
-      {
-        topic: "app/uninstalled",
-        status: "ACTIVE",
-        latency: "31ms",
-        lastDelivered: "Standby",
-        code: 200,
-      },
-      {
-        topic: "customers/data_request (GDPR)",
-        status: "COMPLIANT",
-        latency: "29ms",
-        lastDelivered: "Standby",
-        code: 200,
-      },
-      {
-        topic: "customers/redact (GDPR)",
-        status: "COMPLIANT",
-        latency: "34ms",
-        lastDelivered: "Standby",
-        code: 200,
-      },
-      {
-        topic: "shop/redact (GDPR)",
-        status: "COMPLIANT",
-        latency: "28ms",
-        lastDelivered: "Standby",
-        code: 200,
-      },
-    ],
-    metafieldDefs: [
-      {
-        key: "rankpilot.schema_json",
-        type: "json",
-        owner: "Product",
-        status: "PINNED & ACTIVE",
-        description: "Google AI & LLM JSON-LD structured product graph",
-      },
-      {
-        key: "rankpilot.spec_table",
-        type: "multi_line_text_field",
-        owner: "Product",
-        status: "PINNED & ACTIVE",
-        description: "High-density technical comparison matrix",
-      },
-      {
-        key: "rankpilot.faq_json",
-        type: "json",
-        owner: "Product",
-        status: "PINNED & ACTIVE",
-        description: "Conversational FAQ entities for Perplexity citations",
-      },
-      {
-        key: "rankpilot.seo_score",
-        type: "number_integer",
-        owner: "Product",
-        status: "PINNED & ACTIVE",
-        description: "0-100 Generative Engine Optimization index score",
-      },
-    ],
   });
 };
 
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const url = new URL(request.url);
+  let shop = url.searchParams.get("shop") || "demo.myshopify.com";
+  let adminClient: any = null;
+
+  try {
+    const authResult = await authenticate.admin(request);
+    adminClient = authResult.admin;
+    if (authResult.session?.shop) {
+      shop = authResult.session.shop;
+    }
+  } catch (error) {
+    if (error instanceof Response) throw error;
+    try {
+      const unauthResult = await unauthenticated.admin(shop);
+      adminClient = unauthResult.admin;
+    } catch {}
+  }
+
+  const formData = await request.formData();
+  const intent = formData.get("intent");
+
+  if (intent === "resync_metafields") {
+    // 1. Re-sync GraphQL definitions
+    await resyncMissingMetafieldDefinitions(adminClient);
+    const updatedMetafieldCheck = await verifyProductMetafieldDefinitions(adminClient);
+
+    // 2. Repair any drifted product schemas
+    const repairResult = await repairDriftedProducts(shop, undefined, adminClient);
+    const updatedAudit = await auditCatalogForDrift(shop, adminClient);
+
+    try {
+      await db.autopilotLog.create({
+        data: {
+          shop,
+          productId: "GLOBAL_CATALOG",
+          actionType: "METAFIELD_RESYNC",
+          details: `Re-synchronized Shopify metafield definitions (${updatedMetafieldCheck.registeredCount}/4 active) and verified catalog schema integrity.`,
+        },
+      });
+    } catch {}
+
+    return json({
+      success: true,
+      message: `Metafields re-synchronized: ${updatedMetafieldCheck.registeredCount} of 4 registered in Shopify Admin. Repaired ${repairResult.repairedCount} product schemas.`,
+      updatedAudit,
+      updatedMetafieldCheck,
+    });
+  }
+
+  return json({ success: false });
+};
+
 export default function SystemHealthRoute() {
-  const { shop, driftAudit, webhooks, metafieldDefs, autopilotLogs } = useLoaderData<typeof loader>();
+  const {
+    shop,
+    totalProducts,
+    syncedCount,
+    pendingCount,
+    driftAudit: initialDriftAudit,
+    metafieldCheck: initialMetafieldCheck,
+    webhooks,
+    autopilotLogs,
+  } = useLoaderData<typeof loader>();
+
   const navigate = useNavigate();
   const fetcher = useFetcher<any>();
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
 
-  const isHealing = fetcher.state !== "idle";
+  const isResyncing = fetcher.state !== "idle";
+  const activeAudit: DriftAuditResult = fetcher.data?.updatedAudit || initialDriftAudit;
+  const activeMetafieldCheck = fetcher.data?.updatedMetafieldCheck || initialMetafieldCheck;
 
   useEffect(() => {
     if (fetcher.data?.success) {
-      setSuccessBanner(
-        fetcher.data.message ||
-          `Successfully verified metafield definitions and repaired ${fetcher.data.repairResult?.repairedCount || 0} product schemas.`
-      );
+      setSuccessBanner(fetcher.data.message);
     }
   }, [fetcher.data]);
 
-  const handleSelfHeal = () => {
-    fetcher.submit({ shop }, { method: "POST", action: "/api/self-heal", encType: "application/json" });
+  const handleResyncMetafields = () => {
+    fetcher.submit({ intent: "resync_metafields" }, { method: "POST" });
   };
 
-  const activeAudit: DriftAuditResult = fetcher.data?.updatedAudit || driftAudit;
+  const activeWebhooksCount = webhooks.filter((w: WebhookStatusItem) => w.hasFired).length;
 
   return (
     <Page
       title="System Health & Metafield Diagnostics"
-      subtitle="Shopify App Store Enterprise Readiness, Webhook Sentinel & Self-Healing Terminal"
+      subtitle="Shopify App Store Enterprise Readiness, Webhook Verification & Schema Diagnostics"
       compactTitle
       backAction={{
         content: "Dashboard",
         onAction: () => navigate(`/app?shop=${encodeURIComponent(shop)}`),
       }}
       primaryAction={{
-        content: "Re-sync Metafield Definitions & Self-Heal",
+        content: "Re-sync Metafields",
         icon: RefreshIcon,
-        loading: isHealing,
-        onAction: handleSelfHeal,
+        loading: isResyncing,
+        onAction: handleResyncMetafields,
       }}
     >
       <BlockStack gap="500">
@@ -184,20 +206,33 @@ export default function SystemHealthRoute() {
           </Banner>
         )}
 
-        {/* Top Status Banner */}
+        {/* 1. Honest Top Status Banner (Reflects Actual Store State) */}
         {activeAudit.driftedCount > 0 ? (
           <Banner
             title={`Schema Drift Detected: ${activeAudit.driftedCount} Products Out of Sync`}
             tone="warning"
             action={{
-              content: "Run Self-Healing Auto-Repair Now",
-              loading: isHealing,
-              onAction: handleSelfHeal,
+              content: "Re-sync Schemas Now",
+              loading: isResyncing,
+              onAction: handleResyncMetafields,
             }}
           >
             <Text as="p" variant="bodyMd">
               External theme changes, bulk CSV uploads, or third-party apps have altered product metafields.
-              Clicking self-heal will automatically restore verified JSON-LD graphs and spec matrices.
+              Re-syncing will automatically restore verified JSON-LD graphs and spec matrices.
+            </Text>
+          </Banner>
+        ) : pendingCount > 0 ? (
+          <Banner
+            title="Catalog Synchronization Status"
+            tone="info"
+            action={{
+              content: "Optimize Pending Products",
+              onAction: () => navigate(`/app?shop=${encodeURIComponent(shop)}`),
+            }}
+          >
+            <Text as="p" variant="bodyMd" fontWeight="medium">
+              {`${syncedCount} of ${totalProducts} products synchronized. ${pendingCount} products pending schema generation.`}
             </Text>
           </Banner>
         ) : (
@@ -205,16 +240,17 @@ export default function SystemHealthRoute() {
             <InlineStack gap="200" blockAlign="center">
               <CheckCircleIcon width={20} height={20} fill="#008060" />
               <Text as="p" variant="bodyMd" fontWeight="semibold">
-                All {activeAudit.totalAudited} catalog products are 100% healthy with synchronized schemas and zero drift.
+                {`All ${totalProducts} catalog products are synchronized with live Schema.org JSON-LD, spec matrices, and buyer FAQs.`}
               </Text>
             </InlineStack>
           </Banner>
         )}
 
-        {/* 3 Metric Cards */}
+        {/* 2. Three Professional Metric Cards */}
         <Layout>
           <Layout.Section>
             <InlineStack gap="400" align="space-between">
+              {/* Card 1: Catalog Status */}
               <Box
                 width="31%"
                 padding="400"
@@ -229,14 +265,15 @@ export default function SystemHealthRoute() {
                     CATALOG AUDITED
                   </Text>
                   <Text as="h2" variant="headingXl" fontWeight="bold">
-                    {activeAudit.totalAudited} SKUs
+                    {`${totalProducts} Products`}
                   </Text>
-                  <Text as="p" variant="bodySm" tone="success">
-                    {activeAudit.healthyCount} fully verified
+                  <Text as="p" variant="bodySm" tone={pendingCount === 0 ? "success" : "subdued"}>
+                    {`${syncedCount} synchronized (${pendingCount} pending)`}
                   </Text>
                 </BlockStack>
               </Box>
 
+              {/* Card 2: Schema Integrity (Renamed from Drift Sentinel) */}
               <Box
                 width="31%"
                 padding="400"
@@ -249,21 +286,24 @@ export default function SystemHealthRoute() {
                 <BlockStack gap="100">
                   <InlineStack align="space-between" blockAlign="center">
                     <Text as="p" variant="bodySm" tone="subdued">
-                      DRIFT SENTINEL
+                      SCHEMA INTEGRITY
                     </Text>
                     <Badge tone={activeAudit.driftedCount > 0 ? "warning" : "success"}>
-                      {activeAudit.driftedCount > 0 ? "Drift Detected" : "Zero Drift"}
+                      {activeAudit.driftedCount > 0 ? "Discrepancy Found" : "Verified In Sync"}
                     </Badge>
                   </InlineStack>
                   <Text as="h2" variant="headingXl" fontWeight="bold">
                     {activeAudit.driftedCount}
                   </Text>
                   <Text as="p" variant="bodySm" tone="subdued">
-                    Metafield discrepancies
+                    {activeAudit.driftedCount > 0
+                      ? `${activeAudit.driftedCount} schemas require re-sync`
+                      : "All active schemas match database"}
                   </Text>
                 </BlockStack>
               </Box>
 
+              {/* Card 3: Webhook Health */}
               <Box
                 width="31%"
                 padding="400"
@@ -278,13 +318,19 @@ export default function SystemHealthRoute() {
                     <Text as="p" variant="bodySm" tone="subdued">
                       WEBHOOK HEALTH
                     </Text>
-                    <Badge tone="success">100% Delivery</Badge>
+                    <Badge tone={activeWebhooksCount > 0 ? "success" : "info"}>
+                      {activeWebhooksCount > 0
+                        ? `${activeWebhooksCount} / ${webhooks.length} Active`
+                        : "Listening (Standby)"}
+                    </Badge>
                   </InlineStack>
                   <Text as="h2" variant="headingXl" fontWeight="bold">
-                    6 / 6 Active
+                    {`${activeWebhooksCount} / ${webhooks.length}`}
                   </Text>
                   <Text as="p" variant="bodySm" tone="subdued">
-                    Avg Latency: 33ms
+                    {activeWebhooksCount > 0
+                      ? "Live event delivery verified"
+                      : "No webhook traffic received yet"}
                   </Text>
                 </BlockStack>
               </Box>
@@ -292,16 +338,21 @@ export default function SystemHealthRoute() {
           </Layout.Section>
         </Layout>
 
-        {/* Drifted Products Details (if any) */}
+        {/* Products Requiring Schema Synchronization (if any) */}
         {activeAudit.driftedProducts.length > 0 && (
           <Card>
             <BlockStack gap="300">
               <InlineStack align="space-between" blockAlign="center">
                 <Text as="h3" variant="headingMd" fontWeight="bold">
-                  Drifted Products Requiring Restoration
+                  Products Requiring Schema Synchronization
                 </Text>
-                <Button variant="primary" size="slim" loading={isHealing} onClick={handleSelfHeal}>
-                  Repair All Drifted
+                <Button
+                  variant="primary"
+                  size="slim"
+                  loading={isResyncing}
+                  onClick={handleResyncMetafields}
+                >
+                  Re-sync Products
                 </Button>
               </InlineStack>
               <List>
@@ -323,25 +374,39 @@ export default function SystemHealthRoute() {
           </Card>
         )}
 
-        {/* Metafield Definitions Registry */}
+        {/* 3. Metafield Sync Status (Renamed & GraphQL Verified) */}
         <Card>
           <BlockStack gap="400">
             <InlineStack align="space-between" blockAlign="center">
               <InlineStack gap="200" blockAlign="center">
                 <DatabaseIcon width={20} height={20} />
                 <Text as="h3" variant="headingMd" fontWeight="bold">
-                  Shopify Metafield Definitions & Pinned Schemas
+                  Metafield Sync Status
                 </Text>
               </InlineStack>
-              <Badge tone="success">4/4 Pinned in Admin</Badge>
+              <InlineStack gap="200" blockAlign="center">
+                <Badge tone={activeMetafieldCheck.allRegistered ? "success" : "warning"}>
+                  {`${activeMetafieldCheck.registeredCount} / 4 Registered`}
+                </Badge>
+                {!activeMetafieldCheck.allRegistered && (
+                  <Button
+                    size="slim"
+                    variant="primary"
+                    loading={isResyncing}
+                    onClick={handleResyncMetafields}
+                  >
+                    Re-sync Metafields
+                  </Button>
+                )}
+              </InlineStack>
             </InlineStack>
             <Text as="p" variant="bodySm" tone="subdued">
-              RankPilot ensures that all custom product metafields are registered with official Shopify GraphQL types
-              so that merchants can access and edit them in Shopify Admin.
+              RankPilot verifies that all custom product metafields are registered with official Shopify GraphQL types
+              so that merchants and search engine crawlers can access them in Shopify Admin.
             </Text>
             <Divider />
             <BlockStack gap="300">
-              {metafieldDefs.map((def) => (
+              {activeMetafieldCheck.definitions.map((def: VerifiedMetafieldDefinition) => (
                 <Box
                   key={def.key}
                   padding="300"
@@ -357,9 +422,15 @@ export default function SystemHealthRoute() {
                         <Badge tone="info" size="small">
                           {def.type}
                         </Badge>
-                        <Badge tone="success" size="small">
-                          {def.status}
+                        <Badge
+                          tone={def.isRegistered ? "success" : "warning"}
+                          size="small"
+                        >
+                          {def.isRegistered ? "Registered" : "Unregistered"}
                         </Badge>
+                        {def.pinned && (
+                          <Badge size="small">Pinned in Admin</Badge>
+                        )}
                       </InlineStack>
                       <Text as="p" variant="bodySm" tone="subdued">
                         {def.description}
@@ -375,37 +446,52 @@ export default function SystemHealthRoute() {
           </BlockStack>
         </Card>
 
-        {/* Webhooks Delivery & GDPR Sentinel */}
+        {/* 4. Honest Webhook Delivery Verification */}
         <Card>
           <BlockStack gap="400">
             <InlineStack align="space-between" blockAlign="center">
               <InlineStack gap="200" blockAlign="center">
                 <ShieldCheckMarkIcon width={20} height={20} />
                 <Text as="h3" variant="headingMd" fontWeight="bold">
-                  Webhook Delivery Heartbeats & GDPR Sentinels
+                  Webhook Delivery Verification &amp; Compliance
                 </Text>
               </InlineStack>
-              <Badge tone="success">HMAC SHA256 Verified</Badge>
+              <Badge>HMAC SHA256 Verified</Badge>
             </InlineStack>
+            <Text as="p" variant="bodySm" tone="subdued">
+              Monitored webhook subscriptions configured for catalog synchronization, drift detection, and mandatory Shopify GDPR privacy webhooks.
+            </Text>
             <Divider />
             <BlockStack gap="200">
-              {webhooks.map((w) => (
+              {webhooks.map((w: WebhookStatusItem) => (
                 <InlineStack key={w.topic} align="space-between" blockAlign="center">
                   <InlineStack gap="200" blockAlign="center">
                     <Text as="span" fontWeight="semibold">
                       {w.topic}
                     </Text>
-                    <Badge tone={w.status === "ACTIVE" ? "success" : "info"} size="small">
-                      {w.status}
+                    <Badge
+                      tone={w.hasFired ? (w.status === "ACTIVE" ? "success" : "info") : undefined}
+                      size="small"
+                    >
+                      {w.hasFired ? w.status : "Standby"}
                     </Badge>
                   </InlineStack>
                   <InlineStack gap="300" blockAlign="center">
-                    <Text as="span" variant="bodySm" tone="subdued">
-                      Latency: {w.latency}
-                    </Text>
-                    <Badge tone="success" size="small">
-                      {`HTTP ${w.code}`}
-                    </Badge>
+                    {w.hasFired ? (
+                      <>
+                        <Text as="span" variant="bodySm" tone="subdued">
+                          Latency: {w.latency}
+                        </Text>
+                        <Text as="span" variant="bodySm" tone="subdued">
+                          {w.lastDelivered}
+                        </Text>
+                        <Badge tone={w.code && w.code < 400 ? "success" : "critical"} size="small">
+                          {`HTTP ${w.code}`}
+                        </Badge>
+                      </>
+                    ) : (
+                      <Badge size="small">No events received yet</Badge>
+                    )}
                   </InlineStack>
                 </InlineStack>
               ))}
@@ -413,16 +499,16 @@ export default function SystemHealthRoute() {
           </BlockStack>
         </Card>
 
-        {/* Recent Diagnostics & Self-Healing Audit Trail */}
+        {/* 5. Schema Synchronization Activity Log (Renamed from Self-Healing Audit Trail) */}
         {autopilotLogs.length > 0 && (
           <Card>
             <BlockStack gap="300">
               <Text as="h3" variant="headingMd" fontWeight="bold">
-                Automated Self-Healing Audit Trail
+                Schema Synchronization Activity Log
               </Text>
               <Divider />
               <BlockStack gap="200">
-                {autopilotLogs.map((log) => (
+                {autopilotLogs.map((log: any) => (
                   <InlineStack key={log.id} align="space-between" blockAlign="center">
                     <BlockStack gap="050">
                       <InlineStack gap="200" blockAlign="center">

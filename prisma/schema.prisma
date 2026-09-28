@@ -192,3 +192,14 @@ model CitationMetric {
   snippet         String?
   recordedAt      DateTime @default(now())
 }
+
+model WebhookLog {
+  id          String   @id @default(uuid())
+  shop        String
+  topic       String
+  status      String   @default("SUCCESS") // SUCCESS, ERROR, PROCESSED
+  statusCode  Int      @default(200)
+  latencyMs   Int?
+  payload     String?
+  createdAt   DateTime @default(now())
+}

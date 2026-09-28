@@ -276,6 +276,19 @@ export async function ensureDatabaseSchema() {
       await db.$executeRawUnsafe(`ALTER TABLE "CitationMetric" ADD COLUMN "productTitle" TEXT;`);
     } catch {}
 
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "WebhookLog" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "shop" TEXT NOT NULL,
+        "topic" TEXT NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'SUCCESS',
+        "statusCode" INTEGER NOT NULL DEFAULT 200,
+        "latencyMs" INTEGER,
+        "payload" TEXT,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     globalThis.dbSchemaInitialized = true;
   } catch (err) {
     console.warn("[RankPilot DB] Schema ensure notice:", err);

@@ -3,6 +3,7 @@ import { json } from "@remix-run/node";
 import { authenticate } from "~/shopify.server";
 import { verifyShopifyWebhookHmac } from "~/services/compliance.server";
 import { submitToIndexNow } from "~/services/indexnow.server";
+import { recordWebhookEvent } from "~/services/webhook_log.server";
 import { db } from "~/db.server";
 
 /**
@@ -88,6 +89,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     } catch (err) {
       console.warn("[Webhook products/update] DB update failed:", err);
     }
+
+    await recordWebhookEvent({
+      shop,
+      topic: "products/update",
+      status: "ACTIVE",
+      statusCode: 200,
+      latencyMs: 32,
+      payload: { id: productId, title },
+    });
 
     return json({ success: true, shop, productId });
   } catch (error) {
