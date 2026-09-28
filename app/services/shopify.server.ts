@@ -176,27 +176,14 @@ const INITIAL_DEMO_PRODUCTS: ShopifyProductItem[] = [
       minVariantPrice: { amount: "629.95", currencyCode: "USD" },
     },
     seo: {
-      title: "The Multi-managed Snowboard (Twin-Tip Freestyle & Park)",
-      description: "True twin freestyle park snowboard engineered for rails and kickers. Extruded impact-resistant base and reinforced steel edges. Ships today.",
+      title: "The Multi-managed Snowboard",
+      description: "",
     },
-    rankpilotMetafields: {
-      specMatrix: "<table class='rankpilot-spec-matrix'><thead><tr><th>Specification</th><th>Details & Measurements</th></tr></thead><tbody><tr><td>Shape</td><td>True Twin (Identical Tip and Tail)</td></tr><tr><td>Flex</td><td>5/10 (Playful Park & Jib Flex)</td></tr><tr><td>Edges</td><td>Hardened Carbon Steel Rail Edges</td></tr><tr><td>Base</td><td>Impact-Resistant Extruded 4400 Base</td></tr><tr><td>Warranty</td><td>2-Year Limited Warranty</td></tr></tbody></table>",
-      schemaJson: JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "Product",
-        name: "The Multi-managed Snowboard",
-        offers: { "@type": "Offer", price: "629.95", priceCurrency: "USD", availability: "https://schema.org/InStock" },
-      }),
-      faqJson: JSON.stringify([
-        { question: "Is this board true twin or directional?", answer: "It is a 100% true twin board with identical nose and tail measurements, perfect for switch riding." },
-      ]),
-      seoScore: 94,
-    },
-    optimizationStatus: "AI_READY",
-    aiScore: 94,
-    geoScore: 94,
-    hasRollback: true,
-    lastOptimizedAt: new Date(Date.now() - 3600000 * 20).toISOString(),
+    rankpilotMetafields: {},
+    optimizationStatus: "NEEDS_OPTIMIZATION",
+    aiScore: 38,
+    geoScore: 38,
+    hasRollback: false,
   },
   {
     id: "gid://shopify/Product/8472917005",
@@ -216,162 +203,6 @@ const INITIAL_DEMO_PRODUCTS: ShopifyProductItem[] = [
     },
     seo: {
       title: "The Multi-location Snowboard",
-      description: "",
-    },
-    rankpilotMetafields: {},
-    optimizationStatus: "NEEDS_OPTIMIZATION",
-    aiScore: 38,
-    geoScore: 38,
-    hasRollback: false,
-  },
-  {
-    id: "gid://shopify/Product/8472917006",
-    title: "The Out of Stock Snowboard",
-    handle: "the-out-of-stock-snowboard",
-    descriptionHtml: "<p>Championship powder swallowtail snowboard featuring 3D spoon nose contouring and deep powder setback stance.</p>",
-    vendor: "rankpilot",
-    productType: "snowboard",
-    tags: ["snowboard", "powder", "swallowtail", "deep-snow"],
-    totalInventory: 0,
-    featuredImage: {
-      url: "https://images.unsplash.com/photo-1520697830682-bbb6e85e2b0b?w=800&auto=format&fit=crop&q=80",
-      altText: "The Out of Stock Snowboard",
-    },
-    priceRange: {
-      minVariantPrice: { amount: "785.00", currencyCode: "USD" },
-    },
-    seo: {
-      title: "The Out of Stock Snowboard",
-      description: "",
-    },
-    rankpilotMetafields: {},
-    optimizationStatus: "NEEDS_OPTIMIZATION",
-    aiScore: 38,
-    geoScore: 38,
-    hasRollback: false,
-  },
-  {
-    id: "gid://shopify/Product/8472917007",
-    title: "Selling Plans Ski Wax",
-    handle: "selling-plans-ski-wax",
-    descriptionHtml: "<p>High-fluoro biological ski and snowboard tuning wax formulated for sub-zero temperature speed glide and base hydration.</p>",
-    vendor: "rankpilot",
-    productType: "accessories",
-    tags: ["accessories", "wax", "tuning", "maintenance"],
-    totalInventory: 30,
-    featuredImage: {
-      url: "https://images.unsplash.com/photo-1551524164-687a55dd1126?w=800&auto=format&fit=crop&q=80",
-      altText: "Selling Plans Ski Wax",
-    },
-    priceRange: {
-      minVariantPrice: { amount: "24.95", currencyCode: "USD" },
-    },
-    seo: {
-      title: "Selling Plans Ski Wax",
-      description: "",
-    },
-    rankpilotMetafields: {},
-    optimizationStatus: "NEEDS_OPTIMIZATION",
-    aiScore: 38,
-    geoScore: 38,
-    hasRollback: false,
-  },
-  {
-    id: "gid://shopify/Product/8472917008",
-    title: "The Hidden Snowboard",
-    handle: "the-hidden-snowboard",
-    descriptionHtml: "<p>Stealth matte black freeride board with vibration-dampening cork topsheet and stiff directional flex for technical descents.</p>",
-    vendor: "Snowboard Vendor",
-    productType: "snowboard",
-    tags: ["snowboard", "stealth", "blackout", "freeride"],
-    totalInventory: 50,
-    featuredImage: {
-      url: "https://images.unsplash.com/photo-1516728778615-2d590ea1855e?w=800&auto=format&fit=crop&q=80",
-      altText: "The Hidden Snowboard",
-    },
-    priceRange: {
-      minVariantPrice: { amount: "699.95", currencyCode: "USD" },
-    },
-    seo: {
-      title: "The Hidden Snowboard",
-      description: "",
-    },
-    rankpilotMetafields: {},
-    optimizationStatus: "NEEDS_OPTIMIZATION",
-    aiScore: 38,
-    geoScore: 38,
-    hasRollback: false,
-  },
-  {
-    id: "gid://shopify/Product/8472917009",
-    title: "The Videographer Snowboard",
-    handle: "the-videographer-snowboard",
-    descriptionHtml: "<p>Action-sports media-ready snowboard with integrated action camera mounting inserts and vibration-free core.</p>",
-    vendor: "rankpilot",
-    productType: "snowboard",
-    tags: ["snowboard", "videography", "camera-mount", "park"],
-    totalInventory: 50,
-    featuredImage: {
-      url: "https://images.unsplash.com/photo-1508873696983-2df5293cb395?w=800&auto=format&fit=crop&q=80",
-      altText: "The Videographer Snowboard",
-    },
-    priceRange: {
-      minVariantPrice: { amount: "850.00", currencyCode: "USD" },
-    },
-    seo: {
-      title: "The Videographer Snowboard",
-      description: "",
-    },
-    rankpilotMetafields: {},
-    optimizationStatus: "NEEDS_OPTIMIZATION",
-    aiScore: 38,
-    geoScore: 38,
-    hasRollback: false,
-  },
-  {
-    id: "gid://shopify/Product/8472917010",
-    title: "The Archived Snowboard",
-    handle: "the-archived-snowboard",
-    descriptionHtml: "<p>Vintage retro-graphic directional camber snowboard celebrating 90s snowboarding heritage with modern carbon construction.</p>",
-    vendor: "Snowboard Vendor",
-    productType: "snowboard",
-    tags: ["snowboard", "vintage", "retro", "camber"],
-    totalInventory: 50,
-    featuredImage: {
-      url: "https://images.unsplash.com/photo-1520697830682-bbb6e85e2b0b?w=800&auto=format&fit=crop&q=80",
-      altText: "The Archived Snowboard",
-    },
-    priceRange: {
-      minVariantPrice: { amount: "750.00", currencyCode: "USD" },
-    },
-    seo: {
-      title: "The Archived Snowboard",
-      description: "",
-    },
-    rankpilotMetafields: {},
-    optimizationStatus: "NEEDS_OPTIMIZATION",
-    aiScore: 38,
-    geoScore: 38,
-    hasRollback: false,
-  },
-  {
-    id: "gid://shopify/Product/8472917011",
-    title: "The Collection Snowboard: Hydrogen",
-    handle: "the-collection-snowboard-hydrogen",
-    descriptionHtml: "<p>Benchmark all-mountain twin snowboard with poplar-paulownia wood core and carbon V-bars for explosive pop and edge control.</p>",
-    vendor: "Hydrogen Vendor",
-    productType: "snowboard",
-    tags: ["snowboard", "all-mountain", "twin", "winter"],
-    totalInventory: 50,
-    featuredImage: {
-      url: "https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=800&auto=format&fit=crop&q=80",
-      altText: "The Collection Snowboard: Hydrogen",
-    },
-    priceRange: {
-      minVariantPrice: { amount: "600.00", currencyCode: "USD" },
-    },
-    seo: {
-      title: "The Collection Snowboard: Hydrogen",
       description: "",
     },
     rankpilotMetafields: {},
@@ -1125,7 +956,7 @@ export async function applyOptimizationToProduct({
     }
 
     // 2c. Set Metafields via metafieldsSet (non-blocking for product body)
-    if (shopifySynced) {
+    if (adminClient && typeof adminClient.graphql === "function") {
       try {
         const metafields = [
           {
@@ -1164,7 +995,11 @@ export async function applyOptimizationToProduct({
             value: optimization.aiScore.toString(),
           },
         ];
-        await executeGraphQLWithThrottling(adminClient, METAFIELDS_SET_MUTATION, { metafields });
+        const metaRes = await executeGraphQLWithThrottling(adminClient, METAFIELDS_SET_MUTATION, { metafields });
+        const metaErrors = (metaRes?.data as any)?.metafieldsSet?.userErrors;
+        if (!metaErrors || metaErrors.length === 0) {
+          shopifySynced = true;
+        }
       } catch (metaErr) {
         console.warn("[Shopify GraphQL] metafieldsSet notice:", metaErr);
       }

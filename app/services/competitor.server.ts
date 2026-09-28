@@ -219,6 +219,7 @@ export async function mineCompetitorReviewSentiment({
   productTitle: string;
   shop?: string;
 }): Promise<ReviewSentimentAnalysis> {
+  const isSnowboard = /snowboard|ski|board|wax|winter|camber|rocker/i.test(productTitle);
   const isBackpack = /backpack/i.test(productTitle);
   const isWatch = /watch|band/i.test(productTitle);
   const isBottle = /bottle|tumbler/i.test(productTitle);
@@ -227,7 +228,28 @@ export async function mineCompetitorReviewSentiment({
 
   let weaknesses: CompetitorFrictionPoint[] = [];
 
-  if (isBackpack) {
+  if (isSnowboard) {
+    weaknesses = [
+      {
+        frictionPoint: "Factory tune base dries out rapidly after single powder session on icy hardpack",
+        sampleComplaint: "The base turned chalky white and slow by midday on hard groomers.",
+        severity: "high",
+        defensiveUsp: "High-density sintered Electra 9000 race base factory-infused with deep-penetration bio wax",
+      },
+      {
+        frictionPoint: "Topsheet chips along sidewall when bumping lift lines",
+        sampleComplaint: "Topsheet layer started peeling near the tail after three resort days.",
+        severity: "high",
+        defensiveUsp: "Reinforced 360-degree wrapped steel edges with bevelled polyurethane impact sidewalls",
+      },
+      {
+        frictionPoint: "Nose chatter and vibration at high carving speeds on uneven terrain",
+        sampleComplaint: "Board vibrated intensely through my front foot when riding steep icy runs.",
+        severity: "medium",
+        defensiveUsp: "Triaxial fiberglass matrix reinforced with woven basalt volcanic dampening stringers",
+      },
+    ];
+  } else if (isBackpack) {
     weaknesses = [
       {
         frictionPoint: "Main zipper teeth snag on inner lining after 3 months",

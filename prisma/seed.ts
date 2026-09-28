@@ -27,96 +27,77 @@ export async function seedCatalog() {
     },
   });
 
-  // 2. Clear any prior optimization records for products 1 and 3 so they are pristine unoptimized
+  // 2. Clear any prior optimization records for products 3, 4, 5 so they are pristine unoptimized
+  const unoptimizedProductIds = [
+    "gid://shopify/Product/8472917003",
+    "gid://shopify/Product/8472917004",
+    "gid://shopify/Product/8472917005",
+  ];
+
   await db.productOptimization.deleteMany({
     where: {
       shop,
-      productId: {
-        in: [
-          "gid://shopify/Product/9182371901",
-          "gid://shopify/Product/9182371903",
-        ],
-      },
+      productId: { in: unoptimizedProductIds },
     },
   });
 
-  // Also remove revisions for these 2 products
   await db.revisionHistory.deleteMany({
     where: {
       shop,
-      productId: {
-        in: [
-          "gid://shopify/Product/9182371901",
-          "gid://shopify/Product/9182371903",
-        ],
-      },
+      productId: { in: unoptimizedProductIds },
     },
   });
 
-  // 3. Upsert products 2, 4, 5 as AI_READY (score 96)
+  // 3. Upsert products 1 and 2 as AI_READY (score 96) - 2 of 5 = 40% GEO Readiness baseline
   const aiReadyProducts = [
     {
-      productId: "gid://shopify/Product/9182371902",
-      title: "Titanium Armor Apple Watch Ultra Band 49mm",
-      handle: "titanium-armor-apple-watch-ultra-band-49mm",
+      productId: "gid://shopify/Product/8472917001",
+      title: "The Collection Snowboard: Liquid",
+      handle: "the-collection-snowboard-liquid",
       status: "AI_READY",
       aiScore: 96,
-      optimizedTitle: "Titanium Apple Watch Ultra Band (Grade 2 Titanium) | Apex",
-      optimizedMetaDesc: "Custom Grade 2 Titanium link bracelet for Apple Watch Ultra. DLC coated, ultralight, magnetic deployment clasp. Order with free express delivery.",
-      specMatrixHtml: `<table class="rankpilot-spec-matrix"><thead><tr><th>Feature / Specification</th><th>Details</th></tr></thead><tbody><tr><td>Material</td><td>Grade 2 Aerospace Titanium + DLC Scratch-Resistant Coating</td></tr><tr><td>Compatibility</td><td>Apple Watch Ultra 1/2 (49mm) & Series 10/9/8 (45mm/44mm)</td></tr><tr><td>Clasp Type</td><td>Dual Magnetic Deployment Clasp (Ultra-Secure)</td></tr><tr><td>Weight & Dimensions</td><td>68 grams | Adjustable 140mm - 225mm wrist circumference</td></tr><tr><td>Water Resistance</td><td>100m Ocean / Saltwater & Sweat Proof</td></tr><tr><td>Warranty</td><td>Lifetime Structural Warranty + Free Sizing Tool</td></tr></tbody></table>`,
+      geoScore: 96,
+      originalTitle: "The Collection Snowboard: Liquid",
+      originalBodyHtml: "<p>Premium all-mountain directional snowboard designed for high-speed carving, powder flotation, and backcountry freestyle performance. Features carbon fiber stringers and sintered base.</p>",
+      optimizedTitle: "The Collection Snowboard: Liquid (All-Mountain Carving & Powder)",
+      optimizedMetaDesc: "Handcrafted all-mountain snowboard with carbon stringers and sintered race base. Maximum edge hold and backcountry flotation. Order with free express shipping.",
+      specMatrixHtml: `<table class="rankpilot-spec-matrix"><thead><tr><th>Specification</th><th>Details & Measurements</th></tr></thead><tbody><tr><td>Profile & Camber</td><td>Directional Camber with 10mm Tapered Powder Tail</td></tr><tr><td>Core Materials</td><td>FSC Poplar & Paulownia Wood Core with Carbon V-Bars</td></tr><tr><td>Base Technology</td><td>Sintered Ultra-High-Molecular-Weight (UHMW) Base</td></tr><tr><td>Flex Rating</td><td>7/10 (Medium-Stiff All-Mountain Response)</td></tr><tr><td>Warranty</td><td>3-Year Manufacturer Warranty + Lifetime Edge Guarantee</td></tr></tbody></table>`,
       faqJson: JSON.stringify([
-        { question: "Will this titanium band scratch easily during daily workouts?", answer: "No. The band is coated with Diamond-Like Carbon (DLC) matte finish, providing 5x higher scratch resistance than standard stainless steel." },
-        { question: "Is this compatible with the Apple Watch Ultra 2 49mm?", answer: "Yes, precision-machined 49mm titanium end lugs ensure a zero-gap factory fit for both Apple Watch Ultra 1 and Ultra 2." },
-        { question: "Can I adjust the link size myself without a jeweler?", answer: "Yes, each order includes a precision stainless steel link removal tool with 6 micro-adjustment pins." }
+        { question: "What riding style is the Collection Snowboard Liquid designed for?", answer: "It is an all-mountain directional board built for aggressive carving, tree runs, and deep powder flotation." },
+        { question: "Does this snowboard include pre-waxed base?", answer: "Yes, each board arrives factory pre-tuned with biological all-temperature ski wax ready to ride." },
+        { question: "What is the warranty coverage?", answer: "Backed by a comprehensive 3-year structural warranty against core delamination and edge defects." },
       ]),
       schemaJson: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Product",
-        name: "Titanium Armor Apple Watch Ultra Band 49mm",
-        offers: { "@type": "Offer", price: "179.00", priceCurrency: "USD", availability: "https://schema.org/InStock" }
+        name: "The Collection Snowboard: Liquid",
+        offers: { "@type": "Offer", price: "749.95", priceCurrency: "USD", availability: "https://schema.org/InStock" },
       }),
+      imageAltText: "The Collection Snowboard Liquid matte carbon directional freeride snowboard on powder snow",
     },
     {
-      productId: "gid://shopify/Product/9182371904",
-      title: "QuantumGrip MagSafe Wireless Car Vent Charger 15W",
-      handle: "quantumgrip-magsafe-wireless-car-vent-charger-15w",
+      productId: "gid://shopify/Product/8472917002",
+      title: "The Collection Snowboard: Oxygen",
+      handle: "the-collection-snowboard-oxygen",
       status: "AI_READY",
       aiScore: 96,
-      optimizedTitle: "15W Qi2 MagSafe Car Charger Mount with Active Cooling | Apex",
-      optimizedMetaDesc: "Fast 15W Qi2 wireless car charger with active cooling and N52 magnets. Guaranteed zero-slip grip on any vent. Ships free today with 2-year warranty.",
-      specMatrixHtml: `<table class="rankpilot-spec-matrix"><thead><tr><th>Feature / Specification</th><th>Details</th></tr></thead><tbody><tr><td>Charging Standard</td><td>Official Qi2 Certified 15W Fast Wireless Charging</td></tr><tr><td>Magnet Array</td><td>16x N52 Neodymium Magnets (Holds up to 1.8kg)</td></tr><tr><td>Thermal System</td><td>Silent Active Cooling Turbine Fan (Prevents Phone Throttling)</td></tr><tr><td>Mounting Mechanism</td><td>Steel-Core Hook Lock Clip for Standard & Round AC Vents</td></tr><tr><td>Input Power</td><td>USB-C PD 3.0 (Includes 36W Dual USB-C 12V Car Adapter)</td></tr><tr><td>Warranty</td><td>2-Year Replacement Warranty + 30-Day Money-Back Guarantee</td></tr></tbody></table>`,
+      geoScore: 96,
+      originalTitle: "The Collection Snowboard: Oxygen",
+      originalBodyHtml: "<p>Ultralight freeride snowboard with triaxial fiberglass matrix, basalt dampening, and titanium mounting inserts. Engineered for alpine racing and steep terrain.</p>",
+      optimizedTitle: "The Collection Snowboard: Oxygen (Ultralight Freeride Performance)",
+      optimizedMetaDesc: "Aerospace-grade freeride snowboard with basalt dampening and titanium mounting inserts. Built for high-speed alpine stability. Shop with 30-day trial.",
+      specMatrixHtml: `<table class="rankpilot-spec-matrix"><thead><tr><th>Specification</th><th>Details & Measurements</th></tr></thead><tbody><tr><td>Profile</td><td>Pure Camber with Early Rise Nose for Float</td></tr><tr><td>Reinforcement</td><td>Titanium Binding Inlays & Basalt Vibration Dampeners</td></tr><tr><td>Base</td><td>Electra 9000 Graphite Race Base</td></tr><tr><td>Flex</td><td>8/10 (Stiff Freeride / High-Speed Stability)</td></tr><tr><td>Warranty</td><td>3-Year Manufacturer Warranty</td></tr></tbody></table>`,
       faqJson: JSON.stringify([
-        { question: "Does the charger overheat during navigation with Apple Maps?", answer: "No. The active aerodynamic cooling turbine prevents your iPhone from overheating and thermal throttling." },
-        { question: "Will this mount securely on round air conditioning vents?", answer: "Yes, the steel-reinforced hook mechanism secures firmly onto both horizontal and vertical louvers without slipping." },
-        { question: "Does it charge at the full 15W speed for iPhone 15 and 16?", answer: "Yes, certified Qi2 hardware delivers full 15W wireless power identical to Apple MagSafe." }
+        { question: "Is the Oxygen board suitable for intermediate riders?", answer: "Due to its stiff 8/10 flex rating and high-speed camber, it is best suited for advanced and expert riders." },
+        { question: "How does basalt dampening improve chatter resistance?", answer: "Woven basalt volcanic fibers absorb high-frequency ice vibrations 3x more effectively than traditional fiberglass." },
       ]),
       schemaJson: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Product",
-        name: "QuantumGrip MagSafe Wireless Car Vent Charger 15W",
-        offers: { "@type": "Offer", price: "59.95", priceCurrency: "USD", availability: "https://schema.org/InStock" }
+        name: "The Collection Snowboard: Oxygen",
+        offers: { "@type": "Offer", price: "885.00", priceCurrency: "USD", availability: "https://schema.org/InStock" },
       }),
-    },
-    {
-      productId: "gid://shopify/Product/9182371905",
-      title: "Zenith ANC Wireless Noise-Cancelling Headphones",
-      handle: "zenith-anc-wireless-headphones",
-      status: "AI_READY",
-      aiScore: 96,
-      optimizedTitle: "Zenith ANC Wireless Headphones (Spatial Audio & 40H Battery) | Aura",
-      optimizedMetaDesc: "Studio-grade hybrid active noise cancelling headphones. 40-hour battery, lossless LDAC codec, and personalized spatial audio. Shop with 30-day trial.",
-      specMatrixHtml: `<table class="rankpilot-spec-matrix"><thead><tr><th>Feature / Specification</th><th>Details</th></tr></thead><tbody><tr><td>Noise Cancellation</td><td>Hybrid 4-Mic Active Noise Cancellation (-42dB attenuation)</td></tr><tr><td>Driver Architecture</td><td>40mm Custom Bio-Cellulose Dynamic Drivers</td></tr><tr><td>Battery Life</td><td>40 Hours (ANC ON) / 60 Hours (ANC OFF) | Fast Charge 10m = 5h</td></tr><tr><td>Bluetooth & Codecs</td><td>Bluetooth 5.4, LDAC, aptX Adaptive, AAC, SBC</td></tr><tr><td>Microphone Array</td><td>6-Beamforming Mics with AI Wind Noise Suppression</td></tr><tr><td>Warranty</td><td>2-Year Global Manufacturer Warranty & 30-Day Audition Trial</td></tr></tbody></table>`,
-      faqJson: JSON.stringify([
-        { question: "How does the active noise cancellation compare to industry flagships?", answer: "The custom quad-microphone hybrid array suppresses up to 42dB of low-frequency ambient noise, ideal for flights and busy offices." },
-        { question: "Can I connect to both my MacBook and iPhone simultaneously?", answer: "Yes, Bluetooth Multipoint allows seamless auto-switching between two paired devices without manual re-pairing." },
-        { question: "What codecs are supported for high-resolution lossless audio?", answer: "Zenith supports Sony LDAC (up to 990kbps 24bit/96kHz), aptX Adaptive, AAC, and standard SBC." }
-      ]),
-      schemaJson: JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "Product",
-        name: "Zenith ANC Wireless Noise-Cancelling Headphones",
-        offers: { "@type": "Offer", price: "249.00", priceCurrency: "USD", availability: "https://schema.org/InStock" }
-      }),
+      imageAltText: "The Collection Snowboard Oxygen ultralight alpine freeride board with basalt dampening",
     },
   ];
 
@@ -132,11 +113,14 @@ export async function seedCatalog() {
         data: {
           status: p.status,
           aiScore: p.aiScore,
+          geoScore: p.geoScore,
           optimizedTitle: p.optimizedTitle,
           optimizedMetaDesc: p.optimizedMetaDesc,
           specMatrixHtml: p.specMatrixHtml,
+          specTableHtml: p.specMatrixHtml,
           faqJson: p.faqJson,
           schemaJson: p.schemaJson,
+          imageAltText: p.imageAltText,
           lastOptimizedAt: new Date(),
         },
       });
@@ -147,13 +131,18 @@ export async function seedCatalog() {
           productId: p.productId,
           title: p.title,
           handle: p.handle,
+          productTitle: p.title,
+          productHandle: p.handle,
           status: p.status,
           aiScore: p.aiScore,
+          geoScore: p.geoScore,
           optimizedTitle: p.optimizedTitle,
           optimizedMetaDesc: p.optimizedMetaDesc,
           specMatrixHtml: p.specMatrixHtml,
+          specTableHtml: p.specMatrixHtml,
           faqJson: p.faqJson,
           schemaJson: p.schemaJson,
+          imageAltText: p.imageAltText,
           lastOptimizedAt: new Date(),
         },
       });
@@ -171,10 +160,11 @@ export async function seedCatalog() {
             productId: p.productId,
             shop,
             titleSnapshot: p.title,
-            bodyHtmlSnapshot: "<p>Original unoptimized storefront description.</p>",
+            bodyHtmlSnapshot: p.originalBodyHtml,
             seoTitleSnapshot: p.title,
             seoDescriptionSnapshot: "",
             metafieldsSnapshot: "{}",
+            altTextSnapshot: p.imageAltText,
             rolledBack: false,
           },
         });
@@ -182,7 +172,48 @@ export async function seedCatalog() {
     }
   }
 
-  console.log("Seeding complete: 2 unoptimized, 3 AI_READY products configured.");
+  // 4. Upsert 3 unoptimized records in SQLite so DB is aware of full 5-product catalog
+  const unoptimizedData = [
+    {
+      productId: "gid://shopify/Product/8472917003",
+      title: "The 3p Fulfilled Snowboard",
+      handle: "the-3p-fulfilled-snowboard",
+    },
+    {
+      productId: "gid://shopify/Product/8472917004",
+      title: "The Multi-managed Snowboard",
+      handle: "the-multi-managed-snowboard",
+    },
+    {
+      productId: "gid://shopify/Product/8472917005",
+      title: "The Multi-location Snowboard",
+      handle: "the-multi-location-snowboard",
+    },
+  ];
+
+  for (const item of unoptimizedData) {
+    await db.productOptimization.upsert({
+      where: { shop_productId: { shop, productId: item.productId } },
+      update: {
+        status: "NEEDS_OPTIMIZATION",
+        aiScore: 38,
+        geoScore: 38,
+      },
+      create: {
+        shop,
+        productId: item.productId,
+        title: item.title,
+        handle: item.handle,
+        productTitle: item.title,
+        productHandle: item.handle,
+        status: "NEEDS_OPTIMIZATION",
+        aiScore: 38,
+        geoScore: 38,
+      },
+    });
+  }
+
+  console.log("Seeding complete: 3 unoptimized, 2 AI_READY products configured (40% baseline GEO readiness).");
 }
 
 seedCatalog()

@@ -44,7 +44,7 @@ export async function pingIndexNow({
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
 
-    let res = await fetch("https://api.indexnow.org/indexnow", {
+    let res = await fetch("https://api.indexnow.org/IndexNow", {
       method: "POST",
       headers: {
         "Content-Type": "application/json; charset=utf-8",

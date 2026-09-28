@@ -92,9 +92,9 @@ export function OptimizationModal({
 
   // Render highlighted meta description with subtle keyword tags
   const renderHighlightedDescription = (desc: string) => {
-    const parts = desc.split(/(Grade 2|Titanium|DLC|Qi2|15W|ANC|warranty|guarantee|In Stock|MagSafe|Cordura|waterproof|ultralight)/gi);
+    const parts = desc.split(/(Camber|Rocker|Sintered|Basalt|Carbon|Freeride|Twin-Tip|UHMW|Electra|YKK|Grade 2|Titanium|DLC|Qi2|15W|ANC|warranty|guarantee|In Stock|MagSafe|Cordura|waterproof|ultralight)/gi);
     return parts.map((part, i) => {
-      if (/^(Grade 2|Titanium|DLC|Qi2|15W|ANC|warranty|guarantee|In Stock|MagSafe|Cordura|waterproof|ultralight)$/i.test(part)) {
+      if (/^(Camber|Rocker|Sintered|Basalt|Carbon|Freeride|Twin-Tip|UHMW|Electra|YKK|Grade 2|Titanium|DLC|Qi2|15W|ANC|warranty|guarantee|In Stock|MagSafe|Cordura|waterproof|ultralight)$/i.test(part)) {
         return (
           <span
             key={i}
