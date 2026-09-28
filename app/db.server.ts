@@ -256,6 +256,8 @@ export async function ensureDatabaseSchema() {
       CREATE TABLE IF NOT EXISTS "CitationMetric" (
         "id" TEXT NOT NULL PRIMARY KEY,
         "shop" TEXT NOT NULL,
+        "productId" TEXT,
+        "productTitle" TEXT,
         "query" TEXT NOT NULL,
         "engine" TEXT NOT NULL,
         "rankPosition" INTEGER NOT NULL,
@@ -265,6 +267,14 @@ export async function ensureDatabaseSchema() {
         "recordedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    // Self-healing migration for CitationMetric
+    try {
+      await db.$executeRawUnsafe(`ALTER TABLE "CitationMetric" ADD COLUMN "productId" TEXT;`);
+    } catch {}
+    try {
+      await db.$executeRawUnsafe(`ALTER TABLE "CitationMetric" ADD COLUMN "productTitle" TEXT;`);
+    } catch {}
 
     globalThis.dbSchemaInitialized = true;
   } catch (err) {

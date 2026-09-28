@@ -182,6 +182,8 @@ model AutopilotLog {
 model CitationMetric {
   id              String   @id @default(uuid())
   shop            String
+  productId       String?
+  productTitle    String?
   query           String
   engine          String
   rankPosition    Int
