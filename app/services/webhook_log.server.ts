@@ -45,6 +45,7 @@ export interface WebhookStatusItem {
 }
 
 export const MONITORED_WEBHOOK_TOPICS = [
+  { topic: "products/create", label: "products/create", category: "Core Catalog" },
   { topic: "products/update", label: "products/update", category: "Core Catalog" },
   { topic: "inventory_levels/update", label: "inventory_levels/update", category: "Inventory" },
   { topic: "app/uninstalled", label: "app/uninstalled", category: "Lifecycle" },

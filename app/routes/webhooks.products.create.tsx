@@ -5,6 +5,7 @@ import { verifyShopifyWebhookHmac } from "~/services/compliance.server";
 import { optimizeProductWithAI } from "~/services/gemini.server";
 import { submitToIndexNow } from "~/services/indexnow.server";
 import { applyOptimizationToProduct, ShopifyProductItem } from "~/services/shopify.server";
+import { recordWebhookEvent } from "~/services/webhook_log.server";
 import { db } from "~/db.server";
 
 /**
@@ -56,6 +57,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const handle = payload.handle || "new-product";
 
   console.log(`[Webhook products/create] Received product ${productId} ("${title}") on shop ${shop}`);
+
+  await recordWebhookEvent({
+    shop,
+    topic: "products/create",
+    status: "SUCCESS",
+    statusCode: 200,
+    latencyMs: 16,
+    payload,
+  });
 
   // Check store autopilot configuration
   const config = await db.storeConfig.findUnique({ where: { shop } });
