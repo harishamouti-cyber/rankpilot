@@ -5,8 +5,6 @@ import React, { useState, useEffect } from "react";
 import {
   Page,
   Card,
-  IndexTable,
-  useIndexResourceState,
   Text,
   Badge,
   Button,
@@ -24,6 +22,64 @@ import {
   CitationMetricsSummary,
 } from "~/services/citation.server";
 import { authenticate, unauthenticated } from "~/shopify.server";
+
+export interface GeoScoreColors {
+  tier: "poor" | "average" | "good";
+  text: string;
+  stroke: string;
+  badgeBg: string;
+  badgeBorder: string;
+  badgeText: string;
+  polarisTone: "critical" | "warning" | "success";
+  progressTone: "critical" | "highlight" | "success";
+  label: string;
+}
+
+/**
+ * Industry-Standard SEO Scoring Colors (Google Lighthouse / Ahrefs standard)
+ * 0 to 49 (Poor / Needs Work): Red (#DC2626 / #EF4444 / #FEF2F2)
+ * 50 to 79 (Average / Moderate): Amber / Orange (#D97706 / #F59E0B / #FFFBEB)
+ * 80 to 100 (Good / AI-Ready): Emerald Green (#059669 / #10B981 / #ECFDF5)
+ */
+export function getGeoScoreColors(score: number): GeoScoreColors {
+  if (score < 50) {
+    return {
+      tier: "poor",
+      text: "#DC2626", // text-red-600
+      stroke: "#EF4444", // stroke-red-500
+      badgeBg: "#FEF2F2", // bg-red-50
+      badgeBorder: "#FCA5A5", // border-red-300
+      badgeText: "#DC2626", // text-red-600
+      polarisTone: "critical",
+      progressTone: "critical",
+      label: "Needs Work",
+    };
+  }
+  if (score < 80) {
+    return {
+      tier: "average",
+      text: "#D97706", // text-amber-600
+      stroke: "#F59E0B", // stroke-amber-500
+      badgeBg: "#FFFBEB", // bg-amber-50
+      badgeBorder: "#FCD34D", // border-amber-300
+      badgeText: "#D97706", // text-amber-600
+      polarisTone: "warning",
+      progressTone: "highlight",
+      label: "Moderate",
+    };
+  }
+  return {
+    tier: "good",
+    text: "#059669", // text-emerald-600
+    stroke: "#10B981", // stroke-emerald-500
+    badgeBg: "#ECFDF5", // bg-emerald-50
+    badgeBorder: "#6EE7B7", // border-emerald-300
+    badgeText: "#059669", // text-emerald-600
+    polarisTone: "success",
+    progressTone: "success",
+    label: "AI-Ready",
+  };
+}
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -87,6 +143,7 @@ export default function CitationsPage() {
   const metrics: CitationMetricsSummary = fetcher.data?.metrics || initialMetrics;
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [selectedResources, setSelectedResources] = useState<string[]>([]);
 
   useEffect(() => {
     if (fetcher.data?.success) {
@@ -95,9 +152,6 @@ export default function CitationsPage() {
       );
     }
   }, [fetcher.data]);
-
-  const { selectedResources, allResourcesSelected, handleSelectionChange } =
-    useIndexResourceState(metrics.citations as any);
 
   const handleRunAudit = () => {
     fetcher.submit({ intent: "run_audit" }, { method: "POST" });
@@ -117,71 +171,32 @@ export default function CitationsPage() {
     }
   };
 
-  const gaugeRadius = 54;
-  const gaugeCircumference = 2 * Math.PI * gaugeRadius; // ~339.29
+  // Industry-standard SEO scoring colors
+  const scoreColors = getGeoScoreColors(metrics.geoScore);
+
+  // SVG Gauge geometry with generous inner radius clearance
+  const gaugeRadius = 58;
+  const gaugeCircumference = 2 * Math.PI * gaugeRadius; // ~364.42
   const scorePercent = Math.min(100, Math.max(0, metrics.geoScore));
   const strokeOffset = gaugeCircumference * (1 - scorePercent / 100);
-  const gaugeStrokeColor =
-    scorePercent >= 80 ? "#008060" : scorePercent >= 40 ? "#2C6ECB" : "#D97706";
 
-  const rowMarkup = metrics.citations.map((item: CitationItem, index: number) => (
-    <IndexTable.Row
-      id={index.toString()}
-      key={item.id || index}
-      selected={selectedResources.includes(index.toString())}
-      position={index}
-    >
-      {/* High-Intent Search Query & Real Target Product */}
-      <IndexTable.Cell>
-        <BlockStack gap="050">
-          <Text as="span" variant="bodyMd" fontWeight="bold">
-            "{item.query}"
-          </Text>
-          <Text as="span" variant="bodySm" tone="subdued">
-            Target Product: {item.productTitle}
-          </Text>
-        </BlockStack>
-      </IndexTable.Cell>
+  // Table selection
+  const allSelected =
+    metrics.citations.length > 0 && selectedResources.length === metrics.citations.length;
 
-      {/* Subtle Neutral Engine Badge */}
-      <IndexTable.Cell>{getEngineBadge(item.engine)}</IndexTable.Cell>
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedResources([]);
+    } else {
+      setSelectedResources(metrics.citations.map((_, i) => i.toString()));
+    }
+  };
 
-      {/* Citation Position */}
-      <IndexTable.Cell>
-        <InlineStack gap="150" blockAlign="center">
-          <Text as="span" variant="bodyMd" fontWeight="bold">
-            #{item.rankPosition}
-          </Text>
-          <Badge size="small">
-            {item.isCited
-              ? item.rankPosition === 1
-                ? "Top Source"
-                : "Cited"
-              : "Ungrounded"}
-          </Badge>
-        </InlineStack>
-      </IndexTable.Cell>
-
-      {/* Verification Snippet */}
-      <IndexTable.Cell>
-        <div style={{ maxWidth: 360 }}>
-          <Text as="p" variant="bodySm" tone="subdued">
-            {item.citationSnippet}
-          </Text>
-        </div>
-      </IndexTable.Cell>
-
-      {/* Competitor Outranked / Challenged */}
-      <IndexTable.Cell>
-        <Text as="span" variant="bodySm" tone="subdued">
-          {item.isCited ? "Outranked: " : "Trailing: "}
-          <Text as="span" variant="bodySm" fontWeight="medium">
-            {item.competitorChallenged}
-          </Text>
-        </Text>
-      </IndexTable.Cell>
-    </IndexTable.Row>
-  ));
+  const toggleSelect = (id: string) => {
+    setSelectedResources((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
 
   return (
     <Page
@@ -202,9 +217,22 @@ export default function CitationsPage() {
             alt="RankPilot"
             style={{ width: 28, height: 28, borderRadius: 6 }}
           />
-          <Badge tone={metrics.geoScore >= 80 ? "success" : "info"}>
+          {/* Industry Standard 3-Tier SEO Badge */}
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              padding: "3px 10px",
+              borderRadius: "9999px",
+              fontSize: "12px",
+              fontWeight: 600,
+              backgroundColor: scoreColors.badgeBg,
+              color: scoreColors.badgeText,
+              border: `1px solid ${scoreColors.badgeBorder}`,
+            }}
+          >
             {`${metrics.geoScore} / 100 AI-Ready`}
-          </Badge>
+          </span>
           <Badge>0ms Speed Impact</Badge>
         </div>
       }
@@ -252,7 +280,7 @@ export default function CitationsPage() {
             </InlineStack>
 
             <InlineStack gap="400" align="space-between">
-              {/* 1. Circular Radial Gauge (Synced with actual store readiness score) */}
+              {/* 1. Circular Radial Gauge (Centered Typography & Generous Clearance) */}
               <Box
                 width="31%"
                 padding="400"
@@ -265,61 +293,91 @@ export default function CitationsPage() {
                   <div
                     style={{
                       position: "relative",
-                      width: 130,
-                      height: 130,
+                      width: 140,
+                      height: 140,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                     }}
                   >
                     <svg
-                      width="130"
-                      height="130"
-                      viewBox="0 0 140 140"
+                      width="140"
+                      height="140"
+                      viewBox="0 0 144 144"
                       style={{ transform: "rotate(-90deg)" }}
                     >
                       <circle
-                        cx="70"
-                        cy="70"
+                        cx="72"
+                        cy="72"
                         r={gaugeRadius}
                         fill="none"
-                        stroke="#E4E5E7"
-                        strokeWidth="12"
+                        stroke="#E5E7EB"
+                        strokeWidth="10"
                       />
                       <circle
-                        cx="70"
-                        cy="70"
+                        cx="72"
+                        cy="72"
                         r={gaugeRadius}
                         fill="none"
-                        stroke={gaugeStrokeColor}
-                        strokeWidth="12"
+                        stroke={scoreColors.stroke}
+                        strokeWidth="10"
                         strokeDasharray={gaugeCircumference}
                         strokeDashoffset={strokeOffset}
                         strokeLinecap="round"
                         style={{
-                          transition: "stroke-dashoffset 0.6s ease",
+                          transition: "stroke-dashoffset 0.6s ease, stroke 0.3s ease",
                         }}
                       />
                     </svg>
-                    <div style={{ position: "absolute", textAlign: "center" }}>
-                      <Text as="span" variant="bodyXs" tone="subdued">
+
+                    {/* Perfectly centered inner typography with no stroke clipping */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          color: "#6B7280",
+                          fontWeight: 500,
+                          lineHeight: 1,
+                          letterSpacing: "0.01em",
+                        }}
+                      >
                         GEO score
-                      </Text>
-                      <div
+                      </span>
+                      <span
                         style={{
                           fontSize: "32px",
-                          fontWeight: "bold",
-                          color: gaugeStrokeColor,
-                          lineHeight: "1.1",
+                          fontWeight: 700,
+                          letterSpacing: "-0.025em",
+                          lineHeight: 1,
+                          color: scoreColors.text,
+                          margin: "4px 0",
                         }}
                       >
                         {metrics.geoScore}
-                      </div>
-                      <Text as="span" variant="bodyXs" tone="subdued">
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          color: "#6B7280",
+                          lineHeight: 1.2,
+                          fontWeight: 500,
+                        }}
+                      >
                         / 100 (AI-Ready)
-                      </Text>
+                      </span>
                     </div>
                   </div>
+
                   <Text as="p" variant="bodySm" tone="subdued" alignment="center">
                     {metrics.geoScore === 100
                       ? "Full catalog certified for generative AI citations."
@@ -465,7 +523,7 @@ export default function CitationsPage() {
               </Text>
               <ProgressBar
                 progress={metrics.shareOfVoice}
-                tone="highlight"
+                tone={scoreColors.progressTone}
                 size="small"
               />
             </BlockStack>
@@ -615,23 +673,311 @@ export default function CitationsPage() {
                 </InlineStack>
               </Box>
 
-              <IndexTable
-                resourceName={{ singular: "citation", plural: "citations" }}
-                itemCount={metrics.citations.length}
-                selectedItemsCount={
-                  allResourcesSelected ? "All" : selectedResources.length
-                }
-                onSelectionChange={handleSelectionChange}
-                headings={[
-                  { title: "Shopper Query & Target Product" },
-                  { title: "AI Search Engine" },
-                  { title: "Citation Position" },
-                  { title: "Cited Verification Snippet" },
-                  { title: "Competitor Outranked" },
-                ]}
-              >
-                {rowMarkup}
-              </IndexTable>
+              {/* Robust, Fixed-Layout Table with Strict Proportionate Column Widths */}
+              <div style={{ width: "100%", overflowX: "auto" }}>
+                <table
+                  style={{
+                    width: "100%",
+                    tableLayout: "fixed",
+                    borderCollapse: "collapse",
+                    textAlign: "left",
+                    fontSize: "13px",
+                  }}
+                >
+                  <colgroup>
+                    <col style={{ width: "48px" }} />  {/* Checkbox */}
+                    <col style={{ width: "34%" }} />   {/* Shopper Query & Target Product */}
+                    <col style={{ width: "15%" }} />   {/* AI Search Engine */}
+                    <col style={{ width: "13%" }} />   {/* Citation Position */}
+                    <col style={{ width: "23%" }} />   {/* Cited Verification Snippet */}
+                    <col style={{ width: "15%" }} />   {/* Competitor Outranked */}
+                  </colgroup>
+                  <thead>
+                    <tr
+                      style={{
+                        background: "var(--p-color-bg-surface-secondary, #F7F7F8)",
+                        borderBottom: "1px solid var(--p-color-border-subdued, #E4E4E7)",
+                      }}
+                    >
+                      <th
+                        style={{
+                          padding: "12px 16px",
+                          width: "48px",
+                          verticalAlign: "middle",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={allSelected}
+                          onChange={toggleSelectAll}
+                          style={{
+                            width: "16px",
+                            height: "16px",
+                            cursor: "pointer",
+                            accentColor: "#008060",
+                          }}
+                          aria-label="Select all citations"
+                        />
+                      </th>
+                      <th
+                        style={{
+                          padding: "12px 16px",
+                          fontWeight: 600,
+                          color: "#4B5563",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Shopper Query &amp; Target Product
+                      </th>
+                      <th
+                        style={{
+                          padding: "12px 16px",
+                          fontWeight: 600,
+                          color: "#4B5563",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        AI Search Engine
+                      </th>
+                      <th
+                        style={{
+                          padding: "12px 16px",
+                          fontWeight: 600,
+                          color: "#4B5563",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Citation Position
+                      </th>
+                      <th
+                        style={{
+                          padding: "12px 16px",
+                          fontWeight: 600,
+                          color: "#4B5563",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Cited Verification Snippet
+                      </th>
+                      <th
+                        style={{
+                          padding: "12px 16px",
+                          fontWeight: 600,
+                          color: "#4B5563",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Competitor Outranked
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {metrics.citations.map((item: CitationItem, index: number) => {
+                      const isSelected = selectedResources.includes(index.toString());
+                      return (
+                        <tr
+                          key={item.id || index}
+                          style={{
+                            borderBottom: "1px solid var(--p-color-border-subdued, #E4E4E7)",
+                            background: isSelected
+                              ? "var(--p-color-bg-surface-selected, #F1F2F4)"
+                              : "transparent",
+                            transition: "background 0.15s ease",
+                          }}
+                        >
+                          {/* Checkbox */}
+                          <td
+                            style={{
+                              padding: "14px 16px",
+                              verticalAlign: "top",
+                              width: "48px",
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleSelect(index.toString())}
+                              style={{
+                                width: "16px",
+                                height: "16px",
+                                cursor: "pointer",
+                                accentColor: "#008060",
+                              }}
+                              aria-label={`Select ${item.query}`}
+                            />
+                          </td>
+
+                          {/* Shopper Query & Real Target Product */}
+                          <td
+                            style={{
+                              padding: "14px 16px",
+                              verticalAlign: "top",
+                              overflow: "hidden",
+                              wordBreak: "break-word",
+                              overflowWrap: "break-word",
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "4px",
+                                maxWidth: "100%",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontWeight: 600,
+                                  color: "#111827",
+                                  lineHeight: 1.35,
+                                  wordBreak: "break-word",
+                                }}
+                              >
+                                "{item.query}"
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "12px",
+                                  color: "#6B7280",
+                                  wordBreak: "break-word",
+                                }}
+                              >
+                                Target Product: {item.productTitle}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* AI Search Engine Badge */}
+                          <td
+                            style={{
+                              padding: "14px 16px",
+                              verticalAlign: "top",
+                              overflow: "hidden",
+                              wordBreak: "break-word",
+                            }}
+                          >
+                            {getEngineBadge(item.engine)}
+                          </td>
+
+                          {/* Citation Position */}
+                          <td
+                            style={{
+                              padding: "14px 16px",
+                              verticalAlign: "top",
+                              overflow: "hidden",
+                              wordBreak: "break-word",
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontWeight: 700,
+                                  color: "#111827",
+                                }}
+                              >
+                                #{item.rankPosition}
+                              </span>
+                              <span
+                                style={{
+                                  display: "inline-block",
+                                  padding: "2px 7px",
+                                  borderRadius: "9999px",
+                                  fontSize: "11px",
+                                  fontWeight: 500,
+                                  background: "var(--p-color-bg-surface-secondary, #F4F4F5)",
+                                  border: "1px solid var(--p-color-border-subdued, #E4E4E7)",
+                                  color: "#374151",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {item.isCited
+                                  ? item.rankPosition === 1
+                                    ? "Top Source"
+                                    : "Cited"
+                                  : "Ungrounded"}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Cited Verification Snippet (Strictly Bound, Break-Words) */}
+                          <td
+                            style={{
+                              padding: "14px 16px",
+                              verticalAlign: "top",
+                              overflow: "hidden",
+                              wordBreak: "break-word",
+                              overflowWrap: "break-word",
+                            }}
+                          >
+                            <p
+                              style={{
+                                margin: 0,
+                                fontSize: "12px",
+                                lineHeight: 1.45,
+                                color: "#4B5563",
+                                wordBreak: "break-word",
+                                overflowWrap: "break-word",
+                                maxWidth: "100%",
+                              }}
+                            >
+                              {item.citationSnippet}
+                            </p>
+                          </td>
+
+                          {/* Competitor Outranked / Challenged */}
+                          <td
+                            style={{
+                              padding: "14px 16px",
+                              verticalAlign: "top",
+                              overflow: "hidden",
+                              wordBreak: "break-word",
+                              overflowWrap: "break-word",
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: "12px",
+                                lineHeight: 1.4,
+                                wordBreak: "break-word",
+                                overflowWrap: "break-word",
+                              }}
+                            >
+                              <span style={{ color: "#6B7280" }}>
+                                {item.isCited ? "Outranked: " : "Trailing: "}
+                              </span>
+                              <span
+                                style={{
+                                  fontWeight: 500,
+                                  color: "#1F2937",
+                                }}
+                              >
+                                {item.competitorChallenged}
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </BlockStack>
           </Card>
         )}
