@@ -4,25 +4,23 @@ import {
   Card,
   Text,
   Badge,
-  Button,
   InlineStack,
   BlockStack,
   Box,
   Divider,
+  Banner,
 } from "@shopify/polaris";
-import {
-  ChartLineIcon,
-  CheckCircleIcon,
-  ExportIcon,
-} from "@shopify/polaris-icons";
 
-interface PerformanceDigestData {
+export interface PerformanceDigestData {
   weekStartDate: string;
-  pingsDispatched: number;
-  schemaImpressions: number;
-  redirectsProtected: number;
-  croBaselineConv: number;
-  croPostOptConv: number;
+  weeklyPings: number;
+  totalPings: number;
+  optimizedProductsCount: number;
+  totalProductsCount: number;
+  backupSnapshotsCount: number;
+  weeklyBackupsCount: number;
+  syncFrequency: string;
+  autopilotStatus: string;
 }
 
 interface PerformanceDigestModalProps {
@@ -38,17 +36,17 @@ export function PerformanceDigestModal({
 }: PerformanceDigestModalProps) {
   const data = digest || {
     weekStartDate: new Date(Date.now() - 7 * 86400000).toISOString(),
-    pingsDispatched: 142,
-    schemaImpressions: 8950,
-    redirectsProtected: 14,
-    croBaselineConv: 1.8,
-    croPostOptConv: 3.2,
+    weeklyPings: 0,
+    totalPings: 0,
+    optimizedProductsCount: 0,
+    totalProductsCount: 0,
+    backupSnapshotsCount: 0,
+    weeklyBackupsCount: 0,
+    syncFrequency: "Real-Time (Continuous)",
+    autopilotStatus: "Active (Monitoring 24/7)",
   };
 
-  const conversionLift = (
-    ((data.croPostOptConv - data.croBaselineConv) / data.croBaselineConv) *
-    100
-  ).toFixed(0);
+  const hasActivity = data.weeklyPings > 0 || data.optimizedProductsCount > 0 || data.backupSnapshotsCount > 0;
 
   return (
     <Modal
@@ -64,22 +62,30 @@ export function PerformanceDigestModal({
       <Modal.Section>
         <BlockStack gap="400">
           <Card background="bg-surface-secondary">
-            <InlineStack align="space-between" blockAlign="center">
+            <InlineStack align="space-between" blockAlign="center" wrap>
               <BlockStack gap="050">
                 <Text as="h3" variant="headingMd" fontWeight="bold">
-                  Executive GEO Summary
+                  Store Catalog &amp; Search Indexing Digest
                 </Text>
                 <Text as="p" variant="bodySm" tone="subdued">
-                  7-day catalog audit tracking Google AI Overviews, ChatGPT Search, and Perplexity visibility.
+                  7-day catalog audit tracking real-time IndexNow submissions, live schema metafields, and rollback snapshots.
                 </Text>
               </BlockStack>
-              <Badge tone="success" size="large">
-                {`+${conversionLift}% Conversion Lift`}
+              <Badge tone={hasActivity ? "success" : "info"} size="large">
+                {hasActivity ? "Verified Store Activity" : "Collecting Initial 7-Day Data"}
               </Badge>
             </InlineStack>
           </Card>
 
-          <InlineStack gap="300" align="space-between">
+          {!hasActivity && (
+            <Banner tone="info">
+              <Text as="p" variant="bodySm">
+                Collecting initial 7-day data. As soon as you optimize products or push catalog changes to Shopify, your real-time IndexNow pings, backup revisions, and active metafields will be reported here.
+              </Text>
+            </Banner>
+          )}
+
+          <InlineStack gap="300" align="space-between" wrap={false}>
             <Box
               width="23%"
               padding="300"
@@ -89,14 +95,14 @@ export function PerformanceDigestModal({
               borderColor="border"
             >
               <BlockStack gap="100">
-                <Text as="p" variant="bodyXs" tone="subdued">
+                <Text as="p" variant="bodyXs" tone="subdued" fontWeight="medium">
                   INDEXNOW PINGS
                 </Text>
                 <Text as="h2" variant="headingLg" fontWeight="bold">
-                  {data.pingsDispatched}
+                  {data.weeklyPings}
                 </Text>
-                <Text as="p" variant="bodyXs" tone="success">
-                  ⚡ 0ms index dispatch
+                <Text as="p" variant="bodyXs" tone="subdued">
+                  {data.totalPings === 1 ? "1 total ping dispatched" : `${data.totalPings} total dispatched (Bing & Perplexity)`}
                 </Text>
               </BlockStack>
             </Box>
@@ -110,14 +116,14 @@ export function PerformanceDigestModal({
               borderColor="border"
             >
               <BlockStack gap="100">
-                <Text as="p" variant="bodyXs" tone="subdued">
-                  SCHEMA IMPRESSIONS
+                <Text as="p" variant="bodyXs" tone="subdued" fontWeight="medium">
+                  METAFIELDS ACTIVE
                 </Text>
                 <Text as="h2" variant="headingLg" fontWeight="bold">
-                  {data.schemaImpressions.toLocaleString()}
+                  {`${data.optimizedProductsCount} / ${data.totalProductsCount}`}
                 </Text>
-                <Text as="p" variant="bodyXs" tone="success">
-                  ↑ +34% Google Rich Snippets
+                <Text as="p" variant="bodyXs" tone="subdued">
+                  Live schema, specs &amp; FAQs
                 </Text>
               </BlockStack>
             </Box>
@@ -131,14 +137,16 @@ export function PerformanceDigestModal({
               borderColor="border"
             >
               <BlockStack gap="100">
-                <Text as="p" variant="bodyXs" tone="subdued">
-                  STOCKOUT REDIRECTS
+                <Text as="p" variant="bodyXs" tone="subdued" fontWeight="medium">
+                  BACKUP SNAPSHOTS
                 </Text>
                 <Text as="h2" variant="headingLg" fontWeight="bold">
-                  {data.redirectsProtected}
+                  {data.backupSnapshotsCount}
                 </Text>
                 <Text as="p" variant="bodyXs" tone="subdued">
-                  301 link equity retained
+                  {data.weeklyBackupsCount > 0
+                    ? `${data.weeklyBackupsCount} created this week (1-Click Undo)`
+                    : "Zero-risk rollback history"}
                 </Text>
               </BlockStack>
             </Box>
@@ -152,14 +160,14 @@ export function PerformanceDigestModal({
               borderColor="border"
             >
               <BlockStack gap="100">
-                <Text as="p" variant="bodyXs" tone="subdued">
-                  CRO CONVERSION
+                <Text as="p" variant="bodyXs" tone="subdued" fontWeight="medium">
+                  SYNC FREQUENCY
                 </Text>
                 <Text as="h2" variant="headingLg" fontWeight="bold">
-                  {`${data.croPostOptConv.toFixed(1)}%`}
+                  Instant
                 </Text>
                 <Text as="p" variant="bodyXs" tone="subdued">
-                  Baseline: {data.croBaselineConv.toFixed(1)}%
+                  {data.syncFrequency}
                 </Text>
               </BlockStack>
             </Box>
@@ -175,7 +183,7 @@ export function PerformanceDigestModal({
                 <Text as="span" variant="bodySm">
                   Zero-Click Autopilot Status
                 </Text>
-                <Badge tone="success">Active (Monitoring 24/7)</Badge>
+                <Badge tone="success">{data.autopilotStatus}</Badge>
               </InlineStack>
               <InlineStack align="space-between">
                 <Text as="span" variant="bodySm">
