@@ -28,7 +28,6 @@ import {
   EmptyState,
 } from "@shopify/polaris";
 import {
-  MagicIcon,
   UndoIcon,
   SearchIcon,
   SettingsIcon,
@@ -59,6 +58,7 @@ import { StrikingQueriesModal } from "~/components/StrikingQueriesModal";
 import { PerformanceDigestModal } from "~/components/PerformanceDigestModal";
 import { authenticate, unauthenticated } from "~/shopify.server";
 import { db } from "~/db.server";
+import { SlidersHorizontalIcon, WandMinimalIcon, LayersIcon } from "~/components/Icons";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -1354,8 +1354,9 @@ export default function AppDashboard() {
         </div>
       }
       primaryAction={{
-        content: "⚡ Bulk Optimize All",
-        icon: MagicIcon,
+        content: "Bulk Optimize All",
+        icon: SlidersHorizontalIcon,
+        loading: isOptimizing,
         onAction: handleBulkOptimize,
       }}
       secondaryActions={[
@@ -1521,7 +1522,7 @@ export default function AppDashboard() {
                       </Button>
                     )}
                     <Button
-                      icon={MagicIcon}
+                      icon={WandMinimalIcon}
                       variant="primary"
                       size="slim"
                       loading={isOptimizing}

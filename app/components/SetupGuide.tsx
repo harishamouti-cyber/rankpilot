@@ -14,12 +14,12 @@ import {
 } from "@shopify/polaris";
 import {
   CheckCircleIcon,
-  MagicIcon,
   ShieldCheckMarkIcon,
   ChevronDownIcon,
   ChevronUpIcon,
   XSmallIcon,
 } from "@shopify/polaris-icons";
+import { WandMinimalIcon } from "~/components/Icons";
 import { ShopifyProductItem } from "~/services/shopify.server";
 
 interface SetupGuideProps {
@@ -186,7 +186,7 @@ export function SetupGuide({
                   {!step2Complete && firstUnoptimizedProduct ? (
                     <Button
                       variant="primary"
-                      icon={MagicIcon}
+                      icon={WandMinimalIcon}
                       size="slim"
                       loading={isOptimizing}
                       onClick={() => onOpenDiff(firstUnoptimizedProduct)}

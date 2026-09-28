@@ -12,10 +12,10 @@ import {
 } from "@shopify/polaris";
 import {
   CheckCircleIcon,
-  MagicIcon,
   SearchIcon,
   AlertTriangleIcon,
 } from "@shopify/polaris-icons";
+import { WandMinimalIcon } from "~/components/Icons";
 
 interface WelcomeModalProps {
   open: boolean;
@@ -533,7 +533,7 @@ export function WelcomeModal({
               <Button
                 variant="primary"
                 size="large"
-                icon={MagicIcon}
+                icon={WandMinimalIcon}
                 onClick={handleCompleteAndOptimize}
               >
                 {firstUnoptimizedProductTitle

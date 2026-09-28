@@ -12,7 +12,7 @@ import {
   Divider,
   Button,
 } from "@shopify/polaris";
-import { MagicIcon, SearchIcon } from "@shopify/polaris-icons";
+import { SearchIcon } from "@shopify/polaris-icons";
 import { ShopifyProductItem } from "~/services/shopify.server";
 import { CompetitorExtractedData } from "~/services/competitor.server";
 

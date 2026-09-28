@@ -11,7 +11,8 @@ import {
   Box,
   Banner,
 } from "@shopify/polaris";
-import { SearchIcon, MagicIcon, CheckCircleIcon } from "@shopify/polaris-icons";
+import { SearchIcon, CheckCircleIcon } from "@shopify/polaris-icons";
+import { WandMinimalIcon } from "~/components/Icons";
 import { StrikingQuery } from "~/services/gsc.server";
 
 interface StrikingQueriesModalProps {
@@ -117,7 +118,7 @@ export function StrikingQueriesModal({
         <Button
           size="micro"
           variant={item.status === "BOOSTED" ? "secondary" : "primary"}
-          icon={MagicIcon}
+          icon={WandMinimalIcon}
           disabled={item.status === "BOOSTED"}
           loading={boostingId === item.id}
           onClick={() => handleBoost(item)}

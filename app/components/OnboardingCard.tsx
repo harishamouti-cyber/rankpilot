@@ -10,7 +10,8 @@ import {
   Box,
   Divider,
 } from "@shopify/polaris";
-import { CheckCircleIcon, MagicIcon, ShieldCheckMarkIcon } from "@shopify/polaris-icons";
+import { CheckCircleIcon, ShieldCheckMarkIcon } from "@shopify/polaris-icons";
+import { WandMinimalIcon } from "~/components/Icons";
 import { ShopifyProductItem } from "~/services/shopify.server";
 
 interface OnboardingCardProps {
@@ -129,7 +130,7 @@ export function OnboardingCard({
               {!step2Complete && firstUnoptimizedProduct && (
                 <Button
                   variant="primary"
-                  icon={MagicIcon}
+                  icon={WandMinimalIcon}
                   size="slim"
                   loading={isOptimizing}
                   onClick={() => onOptimizeFirst(firstUnoptimizedProduct)}
