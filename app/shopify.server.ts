@@ -5,9 +5,13 @@ import {
   DeliveryMethod,
   shopifyApp,
   Session,
+  BillingInterval,
+  BillingReplacementBehavior,
 } from "@shopify/shopify-app-remix/server";
 import { SessionStorage } from "@shopify/shopify-app-session-storage";
 import { db } from "./db.server";
+
+export const MONTHLY_PLAN = "RankPilot Pro";
 
 const memorySessionCache = new Map<string, Session>();
 
@@ -164,6 +168,19 @@ export const shopify = shopifyApp({
   future: {
     unstable_newEmbeddedAuthStrategy: true,
     expiringOfflineAccessTokens: true,
+  },
+  billing: {
+    [MONTHLY_PLAN]: {
+      lineItems: [
+        {
+          amount: 29.0,
+          currencyCode: "USD",
+          interval: BillingInterval.Every30Days,
+        },
+      ],
+      trialDays: 7,
+      replacementBehavior: BillingReplacementBehavior.ApplyImmediately,
+    },
   },
 });
 

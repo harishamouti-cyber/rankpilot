@@ -39,6 +39,7 @@ import { db } from "~/db.server";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   let shop = url.searchParams.get("shop") || "demo.myshopify.com";
+  const isPreview = shop.includes("demo") || url.searchParams.get("preview") === "true";
 
   let adminClient: any = null;
   try {
@@ -48,7 +49,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       shop = authResult.session.shop;
     }
   } catch (error) {
-    if (error instanceof Response) throw error;
+    if (error instanceof Response && !isPreview) throw error;
     try {
       const unauthResult = await unauthenticated.admin(shop);
       adminClient = unauthResult.admin;
@@ -99,6 +100,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export const action = async ({ request }: ActionFunctionArgs) => {
   const url = new URL(request.url);
   let shop = url.searchParams.get("shop") || "demo.myshopify.com";
+  const isPreview = shop.includes("demo") || url.searchParams.get("preview") === "true";
   let adminClient: any = null;
 
   try {
@@ -108,7 +110,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       shop = authResult.session.shop;
     }
   } catch (error) {
-    if (error instanceof Response) throw error;
+    if (error instanceof Response && !isPreview) throw error;
     try {
       const unauthResult = await unauthenticated.admin(shop);
       adminClient = unauthResult.admin;

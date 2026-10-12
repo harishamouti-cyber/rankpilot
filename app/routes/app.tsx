@@ -11,17 +11,21 @@ export const headers: HeadersFunction = ({ parentHeaders }) => {
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const url = new URL(request.url);
+  const shopParam = url.searchParams.get("shop") || "demo.myshopify.com";
+  const isPreview =
+    shopParam.includes("demo") ||
+    url.searchParams.get("preview") === "true";
   const apiKey = process.env.SHOPIFY_API_KEY || "82464865c45f23d73b21b486de6ace7a";
+
   try {
     const { session } = await authenticate.admin(request);
     return json({ apiKey, shop: session.shop, isEmbedded: true });
   } catch (error) {
-    if (error instanceof Response) {
+    if (error instanceof Response && !isPreview) {
       throw error;
     }
-    const url = new URL(request.url);
-    const shop = url.searchParams.get("shop") || "demo.myshopify.com";
-    return json({ apiKey, shop, isEmbedded: false });
+    return json({ apiKey, shop: shopParam, isEmbedded: false });
   }
 };
 

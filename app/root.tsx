@@ -34,20 +34,28 @@ export const meta: MetaFunction = () => [
 ];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const url = new URL(request.url);
+  const isPreview =
+    url.searchParams.get("preview") === "true" ||
+    url.searchParams.get("shop") === "demo.myshopify.com";
+
   return json({
     apiKey: process.env.SHOPIFY_API_KEY || "82464865c45f23d73b21b486de6ace7a",
+    isPreview,
   });
 };
 
 export default function App() {
-  const { apiKey } = useLoaderData<typeof loader>();
+  const { apiKey, isPreview } = useLoaderData<typeof loader>();
   return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <meta name="shopify-api-key" content={apiKey} />
-        <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
+        {!isPreview && (
+          <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
+        )}
         <Meta />
         <Links />
       </head>

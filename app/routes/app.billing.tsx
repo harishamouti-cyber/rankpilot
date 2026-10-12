@@ -1,6 +1,6 @@
-import type { LoaderFunctionArgs } from "@remix-run/node";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData, useRevalidator, useNavigate } from "@remix-run/react";
+import { Form, useActionData, useLoaderData, useNavigate, useNavigation } from "@remix-run/react";
 import React, { useState } from "react";
 import {
   Page,
@@ -12,150 +12,182 @@ import {
   Box,
   Banner,
   Divider,
-  Card,
-  Icon,
 } from "@shopify/polaris";
-import { CheckIcon, CreditCardIcon } from "@shopify/polaris-icons";
-import { getCurrentPlan, confirmShopPlan, cancelAppSubscription, verifyActiveSubscription, PLANS, PlanDefinition } from "~/services/billing.server";
-import { authenticate } from "~/shopify.server";
+import { CheckIcon } from "@shopify/polaris-icons";
+import { PLANS } from "~/services/billing.server";
+import { authenticate, MONTHLY_PLAN } from "~/shopify.server";
 import { db } from "~/db.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
-  let shop = url.searchParams.get("shop") || "demo.myshopify.com";
-  let adminClient: any = null;
+  const shopParam = url.searchParams.get("shop") || "demo.myshopify.com";
+  const isPreview = shopParam.includes("demo") || url.searchParams.get("preview") === "true";
+
+  let shop = shopParam;
+  let hasActiveSubscription = false;
+  let activeSub: any = null;
 
   try {
-    const auth = await authenticate.admin(request);
-    adminClient = auth.admin;
-    if (auth.session?.shop) {
-      shop = auth.session.shop;
+    const { billing, session } = await authenticate.admin(request);
+    shop = session.shop;
+
+    // Check with Shopify live billing API (includes test charges for dev/reviewer stores)
+    const billingCheck = await billing.check({
+      plans: [MONTHLY_PLAN],
+      isTest: true,
+    });
+
+    hasActiveSubscription = Boolean(billingCheck.hasActivePayment);
+    activeSub = billingCheck.appSubscriptions?.[0] || null;
+
+    if (hasActiveSubscription && activeSub) {
+      await db.appSetting.upsert({
+        where: { shop },
+        create: {
+          shop,
+          plan: "PRO",
+          status: "ACTIVE",
+          subscriptionId: activeSub.id,
+        },
+        update: {
+          plan: "PRO",
+          status: "ACTIVE",
+          subscriptionId: activeSub.id,
+        },
+      });
+      await db.storeConfig.upsert({
+        where: { shop },
+        create: {
+          shop,
+          planTier: "PRO",
+          subscriptionId: activeSub.id,
+        },
+        update: {
+          planTier: "PRO",
+          subscriptionId: activeSub.id,
+        },
+      });
+    } else {
+      // Store has NO active payment on Shopify — keep DB tier unbilled/INACTIVE
+      await db.appSetting.upsert({
+        where: { shop },
+        create: {
+          shop,
+          plan: "PRO",
+          status: "INACTIVE",
+          subscriptionId: null,
+        },
+        update: {
+          status: "INACTIVE",
+          subscriptionId: null,
+        },
+      });
+      await db.storeConfig.updateMany({
+        where: { shop },
+        data: {
+          subscriptionId: null,
+        },
+      });
     }
-  } catch {}
-
-  const confirmed = url.searchParams.get("confirmed");
-  const chargeId = url.searchParams.get("charge_id");
-
-  if (confirmed === "true") {
-    await confirmShopPlan(shop, "PRO", chargeId || undefined);
+  } catch (error) {
+    if (error instanceof Response && !isPreview) {
+      throw error;
+    }
+    const setting = await db.appSetting.findUnique({ where: { shop } });
+    hasActiveSubscription = Boolean(setting?.subscriptionId && setting?.status === "ACTIVE");
   }
 
-  // Dynamically verify active subscription against Shopify GraphQL
-  const verifiedSub = await verifyActiveSubscription(shop, adminClient);
-
-  const currentPlan = await getCurrentPlan(shop);
   const setting = await db.appSetting.findUnique({ where: { shop } });
-  const hasActiveSubscription = verifiedSub.hasActiveSubscription || Boolean(setting?.subscriptionId && setting?.status === "ACTIVE");
 
   return json({
     shop,
-    currentPlan,
     plans: PLANS,
     hasActiveSubscription,
-    subscriptionId: setting?.subscriptionId || null,
-    trialEndsAt: setting?.trialEndsAt?.toISOString() || null,
-    justConfirmed: confirmed === "true",
+    subscriptionId: activeSub?.id || setting?.subscriptionId || null,
+    trialEndsAt: activeSub?.currentPeriodEnd || setting?.trialEndsAt?.toISOString() || null,
   });
 };
 
-async function appFetch(url: string, options: RequestInit = {}) {
-  const headers = new Headers(options.headers || {});
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const url = new URL(request.url);
+  const shopParam = url.searchParams.get("shop") || "demo.myshopify.com";
+  const isPreview = shopParam.includes("demo") || url.searchParams.get("preview") === "true";
+
   try {
-    if (typeof window !== "undefined" && (window as any).shopify?.idToken) {
-      const token = await (window as any).shopify.idToken();
-      if (token && !headers.has("Authorization")) {
-        headers.set("Authorization", `Bearer ${token}`);
-      }
+    const { billing, session } = await authenticate.admin(request);
+    const formData = await request.formData();
+    const intent = formData.get("intent");
+
+    if (intent === "subscribe") {
+      const cleanShopName = session.shop.replace(".myshopify.com", "");
+      const apiKey = process.env.SHOPIFY_API_KEY || "82464865c45f23d73b21b486de6ace7a";
+      const returnUrl = `https://admin.shopify.com/store/${cleanShopName}/apps/${apiKey}/app/billing`;
+
+      // billing.request issues App Bridge exit-iframe headers to redirect cleanly to Shopify's confirmation URL
+      return await billing.request({
+        plan: MONTHLY_PLAN,
+        isTest: true,
+        returnUrl,
+      });
     }
-  } catch (e) {
-    console.warn("[appFetch] Could not get App Bridge idToken:", e);
+
+    if (intent === "cancel") {
+      const billingCheck = await billing.check({
+        plans: [MONTHLY_PLAN],
+        isTest: true,
+      });
+
+      const sub = billingCheck.appSubscriptions?.[0];
+      if (sub) {
+        await billing.cancel({
+          subscriptionId: sub.id,
+          isTest: true,
+          prorate: true,
+        });
+      }
+
+      await db.appSetting.upsert({
+        where: { shop: session.shop },
+        create: {
+          shop: session.shop,
+          plan: "PRO",
+          status: "INACTIVE",
+          subscriptionId: null,
+        },
+        update: {
+          status: "INACTIVE",
+          subscriptionId: null,
+        },
+      });
+
+      await db.storeConfig.updateMany({
+        where: { shop: session.shop },
+        data: {
+          subscriptionId: null,
+        },
+      });
+
+      return json({ success: true, cancelled: true });
+    }
+  } catch (error) {
+    if (error instanceof Response) {
+      throw error;
+    }
+    console.error("[Billing Action Error]:", error);
+    return json({ error: (error as any)?.message || "Failed to process billing request" }, { status: 500 });
   }
-  return fetch(url, { ...options, headers });
-}
+
+  return json({});
+};
 
 export default function BillingPage() {
-  const { shop, currentPlan, plans, hasActiveSubscription, subscriptionId, trialEndsAt, justConfirmed } =
-    useLoaderData<typeof loader>();
-  const revalidator = useRevalidator();
+  const { shop, hasActiveSubscription, subscriptionId, trialEndsAt } = useLoaderData<typeof loader>();
+  const actionData = useActionData<{ error?: string; cancelled?: boolean }>();
+  const navigation = useNavigation();
   const navigate = useNavigate();
 
-  const [isUpdating, setIsUpdating] = useState<boolean>(false);
-  const [isCanceling, setIsCanceling] = useState<boolean>(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(
-    justConfirmed ? "✓ Welcome to RankPilot Pro! Your 7-day free trial is now active." : null
-  );
-
-  const proPlan = plans.PRO || {
-    id: "PRO",
-    name: "RankPilot Pro",
-    price: 29,
-    interval: "EVERY_30_DAYS",
-    currency: "USD",
-    productLimit: 1000000,
-    trialDays: 7,
-    features: [],
-  };
-
-  const handleStartTrial = async () => {
-    setIsUpdating(true);
-    try {
-      const res = await appFetch("/api/billing", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          shop,
-          planId: "PRO",
-          action: "create_subscription",
-          returnUrl: `${window.location.origin}/app/billing?shop=${encodeURIComponent(shop)}`,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to initiate subscription");
-
-      if (data.confirmationUrl) {
-        if (data.confirmationUrl.startsWith("http")) {
-          // Native Shopify Recurring Charge Confirmation URL
-          if (window.top) {
-            window.top.location.href = data.confirmationUrl;
-          } else {
-            window.location.href = data.confirmationUrl;
-          }
-        } else {
-          navigate(data.confirmationUrl);
-        }
-      } else {
-        setToastMessage("✓ Successfully activated RankPilot Pro with 7-day free trial!");
-        revalidator.revalidate();
-      }
-    } catch (err: any) {
-      alert(`Billing error: ${err.message}`);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const handleCancelSubscription = async () => {
-    if (!confirm("Are you sure you want to cancel your RankPilot Pro subscription?")) return;
-    setIsCanceling(true);
-    try {
-      const res = await appFetch("/api/billing", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          shop,
-          action: "cancel",
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to cancel subscription");
-      setToastMessage("Subscription canceled. You will not be billed.");
-      revalidator.revalidate();
-    } catch (err: any) {
-      alert(`Cancel error: ${err.message}`);
-    } finally {
-      setIsCanceling(false);
-    }
-  };
+  const isUpdating = navigation.state === "submitting" && navigation.formData?.get("intent") === "subscribe";
+  const isCanceling = navigation.state === "submitting" && navigation.formData?.get("intent") === "cancel";
 
   return (
     <Page
@@ -167,10 +199,18 @@ export default function BillingPage() {
       }}
     >
       <BlockStack gap="500">
-        {toastMessage && (
-          <Banner tone="success" onDismiss={() => setToastMessage(null)}>
+        {actionData?.error && (
+          <Banner tone="critical">
             <Text as="p" variant="bodyMd">
-              {toastMessage}
+              {String(actionData.error)}
+            </Text>
+          </Banner>
+        )}
+
+        {actionData?.cancelled && (
+          <Banner tone="info">
+            <Text as="p" variant="bodyMd">
+              Subscription canceled. You will not be billed.
             </Text>
           </Banner>
         )}
@@ -301,27 +341,40 @@ export default function BillingPage() {
                     <Button variant="secondary" onClick={() => navigate(`/app?shop=${encodeURIComponent(shop)}`)}>
                       Back to Dashboard
                     </Button>
-                    <Button
-                      variant="plain"
-                      tone="critical"
-                      loading={isCanceling}
-                      onClick={handleCancelSubscription}
+                    <Form
+                      method="post"
+                      onSubmit={(e) => {
+                        if (!confirm("Are you sure you want to cancel your RankPilot Pro subscription?")) {
+                          e.preventDefault();
+                        }
+                      }}
                     >
-                      Cancel Subscription
-                    </Button>
+                      <input type="hidden" name="intent" value="cancel" />
+                      <Button
+                        variant="plain"
+                        tone="critical"
+                        submit
+                        loading={isCanceling}
+                      >
+                        Cancel Subscription
+                      </Button>
+                    </Form>
                   </InlineStack>
                 </BlockStack>
               ) : (
                 <BlockStack gap="300">
-                  <Button
-                    variant="primary"
-                    size="large"
-                    fullWidth
-                    loading={isUpdating}
-                    onClick={handleStartTrial}
-                  >
-                    Start 7-Day Free Trial ($29/month)
-                  </Button>
+                  <Form method="post">
+                    <input type="hidden" name="intent" value="subscribe" />
+                    <Button
+                      variant="primary"
+                      size="large"
+                      fullWidth
+                      submit
+                      loading={isUpdating}
+                    >
+                      Start 7-Day Free Trial ($29/month)
+                    </Button>
+                  </Form>
                   <Text as="p" variant="bodyXs" alignment="center" tone="subdued">
                     You won't be charged today. 7 full days of unrestricted access, then $29/mo billed directly to your Shopify
                     account. Cancel anytime with 1 click.

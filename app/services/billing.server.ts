@@ -137,7 +137,39 @@ export async function verifyActiveSubscription(
             subscriptionId: sub.id,
           },
         });
+        await db.storeConfig.upsert({
+          where: { shop },
+          create: {
+            shop,
+            planTier: "PRO",
+            subscriptionId: sub.id,
+          },
+          update: {
+            planTier: "PRO",
+            subscriptionId: sub.id,
+          },
+        });
         return { hasActiveSubscription: true, subscription: sub, planTier: "PRO" };
+      } else {
+        // Live Shopify API confirmed store does NOT have an active subscription
+        await db.appSetting.upsert({
+          where: { shop },
+          create: {
+            shop,
+            plan: "PRO",
+            status: "INACTIVE",
+            subscriptionId: null,
+          },
+          update: {
+            status: "INACTIVE",
+            subscriptionId: null,
+          },
+        });
+        await db.storeConfig.updateMany({
+          where: { shop },
+          data: { subscriptionId: null },
+        });
+        return { hasActiveSubscription: false, subscription: null, planTier: "PRO" };
       }
     } catch (e: any) {
       console.warn("[Billing] verifyActiveSubscription GraphQL check notice:", e.message);
@@ -229,22 +261,23 @@ export async function createAppSubscription({
   // If running in development / test mode and no live confirmation URL was returned
   if (!confirmationUrl) {
     const separator = returnUrl.includes("?") ? "&" : "?";
-    confirmationUrl = `${returnUrl}${separator}charge_id=${subscriptionId}&plan=PRO&confirmed=true`;
+    confirmationUrl = `${returnUrl}${separator}charge_id=${subscriptionId}&plan=PRO`;
   }
 
-  // Update AppSetting with pending subscription
+  // Update AppSetting with pending subscription (NEVER marked ACTIVE until merchant approves)
   await db.appSetting.upsert({
     where: { shop },
     create: {
       shop,
       plan: "PRO",
-      status: "ACTIVE",
+      status: "PENDING",
       subscriptionId,
       subscriptionConfirmationUrl: confirmationUrl,
       trialEndsAt: plan.trialDays > 0 ? new Date(Date.now() + plan.trialDays * 86400000) : null,
     },
     update: {
       plan: "PRO",
+      status: "PENDING",
       subscriptionId,
       subscriptionConfirmationUrl: confirmationUrl,
       trialEndsAt: plan.trialDays > 0 ? new Date(Date.now() + plan.trialDays * 86400000) : null,

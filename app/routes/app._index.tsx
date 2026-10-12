@@ -62,6 +62,7 @@ import { SlidersHorizontalIcon, WandMinimalIcon, LayersIcon } from "~/components
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   let shop = url.searchParams.get("shop") || "demo.myshopify.com";
+  const isPreview = shop.includes("demo") || url.searchParams.get("preview") === "true";
   let adminClient: any = null;
 
   try {
@@ -71,7 +72,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       shop = authResult.session.shop;
     }
   } catch (error) {
-    if (error instanceof Response) {
+    if (error instanceof Response && !isPreview) {
       throw error;
     }
     try {
@@ -425,8 +426,13 @@ export default function AppDashboard() {
 
   const initialUnoptimizedCount = initialProducts.filter((p) => !isProdOptimized(p)).length;
 
-  // Default to "Needs Optimization" tab (index 1) if any unoptimized items exist
-  const [selectedStatusTab, setSelectedStatusTab] = useState(initialUnoptimizedCount > 0 ? 1 : 0);
+  // Default to "Needs Optimization" tab (index 1) if any unoptimized items exist, or tab=all if specified in URL
+  const [selectedStatusTab, setSelectedStatusTab] = useState(() => {
+    if (typeof window !== "undefined" && window.location.search.includes("tab=all")) {
+      return 0;
+    }
+    return initialUnoptimizedCount > 0 ? 1 : 0;
+  });
   const [isScanningAutopilot, setIsScanningAutopilot] = useState(false);
   const [activeActionMenuId, setActiveActionMenuId] = useState<string | null>(null);
   const [isIndexNowModalOpen, setIsIndexNowModalOpen] = useState(false);
@@ -481,28 +487,42 @@ export default function AppDashboard() {
 
   React.useEffect(() => {
     if (typeof window !== "undefined" && window.location.search.includes("demoDiff=1") && initialProducts.length > 0) {
-      const prod = initialProducts[0];
+      const prod = {
+        ...initialProducts[0],
+        optimizationStatus: "NEEDS_OPTIMIZATION" as const,
+        geoScore: 38,
+        aiScore: 38,
+      };
       setSelectedProduct(prod);
+      let parsedFaq: any[] = [];
+      try {
+        parsedFaq = prod.rankpilotMetafields?.faqJson ? JSON.parse(prod.rankpilotMetafields.faqJson) : [];
+      } catch {}
+      let parsedSchema: any = {};
+      try {
+        parsedSchema = prod.rankpilotMetafields?.schemaJson ? JSON.parse(prod.rankpilotMetafields.schemaJson) : {};
+      } catch {}
+
       setCurrentOptimization({
-        seoTitle: "ErgoLight: Premium Height-Adjustable LED Desk Lamp with USB-C Charging - White",
-        seoDescription: "Engineered for optimal focus and productivity with touch dimmer, USB-C charging port, and full spectrum eye-protection LED illumination.",
+        seoTitle: prod.seo?.title || prod.title,
+        seoDescription: prod.seo?.description || "Directional all-mountain snowboard with early-rise nose and sintered race base.",
         aiScore: 96,
         scoreBreakdown: {
-          titleOptimization: 98,
-          metaDescriptionQuality: 95,
-          specMatrixCompleteness: 96,
-          schemaRichness: 97,
-          conversationalFaqDepth: 94,
+          titleOptimization: 19,
+          metaDescriptionQuality: 19,
+          specMatrixCompleteness: 20,
+          schemaRichness: 18,
+          conversationalFaqDepth: 18,
         },
-        summarySnippet: "Entity-grounded optimization matching Google AI Overview search queries.",
-        specMatrixHtml: "<table><thead><tr><th>Feature</th><th>Specification</th></tr></thead><tbody><tr><td>Lumen Output</td><td>3500 Lumens</td></tr><tr><td>Color Temperature</td><td>2700K - 6500K</td></tr><tr><td>Material</td><td>Aircraft-grade Aluminum</td></tr></tbody></table>",
-        schemaJson: { "@context": "https://schema.org", "@type": "Product", "name": prod.title },
-        faqList: [
-          { question: "What is the lumen output of the ErgoLight desk lamp?", answer: "The ErgoLight delivers up to 3500 lumens of flicker-free illumination across 5 color temperature presets." },
-          { question: "Does this lamp include high-speed USB-C charging?", answer: "Yes, it features an integrated 20W USB-C Power Delivery port capable of fast-charging smartphones and accessories." },
-          { question: "Is the lamp compatible with smart home power strips?", answer: "Yes, it retains its previous brightness and color setting when powered on via external switches." }
+        summarySnippet: `Entity-grounded optimization matching Google AI Overview search queries for ${prod.title}.`,
+        specMatrixHtml: prod.rankpilotMetafields?.specMatrix || "<table class='rankpilot-spec-matrix'><thead><tr><th>Specification</th><th>Details & Measurements</th></tr></thead><tbody><tr><td>Profile</td><td>Pure Camber with Early Rise Nose</td></tr><tr><td>Base</td><td>Electra 9000 Sintered Race Base</td></tr><tr><td>Flex</td><td>8/10 (Stiff Freeride Stability)</td></tr></tbody></table>",
+        schemaJson: Object.keys(parsedSchema).length > 0 ? parsedSchema : { "@context": "https://schema.org", "@type": "Product", name: prod.title },
+        faqList: parsedFaq.length >= 3 ? parsedFaq : [
+          { question: `What terrain is ${prod.title} best suited for?`, answer: "Optimized for all-mountain carving, backcountry powder bowls, and high-speed resort groomers." },
+          { question: "What binding compatibility does this snowboard use?", answer: "Features universal 2x4 and 4x4 insert patterns compatible with all modern snowboard bindings." },
+          { question: "What is the warranty coverage?", answer: "Backed by a comprehensive 3-year structural warranty against core delamination and edge defects." },
         ],
-        imageAltText: "ErgoLight height-adjustable LED desk lamp in matte white finish with touch dimmer",
+        imageAltText: prod.imageAltText || prod.featuredImage?.altText || `${prod.title} directional carving snowboard in action`,
       });
       setActiveModal("optimize");
     }
@@ -1444,6 +1464,8 @@ export default function AppDashboard() {
       <BlockStack gap="500">
         {toastMessage && (
           <div
+            id="rankpilot-toast"
+            className="rankpilot-custom-toast"
             style={{
               position: "fixed",
               bottom: 24,
