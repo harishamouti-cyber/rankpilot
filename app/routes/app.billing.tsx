@@ -119,15 +119,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const intent = formData.get("intent");
 
     if (intent === "subscribe") {
-      const cleanShopName = session.shop.replace(".myshopify.com", "");
-      const apiKey = process.env.SHOPIFY_API_KEY || "82464865c45f23d73b21b486de6ace7a";
-      const returnUrl = `https://admin.shopify.com/store/${cleanShopName}/apps/${apiKey}/app/billing`;
-
-      // billing.request issues App Bridge exit-iframe headers to redirect cleanly to Shopify's confirmation URL
+      // billing.request handles returnUrl and App Bridge exit-iframe reauthorization headers automatically
       return await billing.request({
         plan: MONTHLY_PLAN,
         isTest: true,
-        returnUrl,
       });
     }
 
@@ -174,7 +169,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       throw error;
     }
     console.error("[Billing Action Error]:", error);
-    return json({ error: (error as any)?.message || "Failed to process billing request" }, { status: 500 });
+
+    const errorData = (error as any)?.errorData;
+    let errorMessage = (error as any)?.message || "Failed to process billing request";
+    if (Array.isArray(errorData) && errorData.length > 0) {
+      errorMessage = errorData.map((e: any) => e.message || JSON.stringify(e)).join(" | ");
+    } else if (errorData && typeof errorData === "object") {
+      errorMessage = JSON.stringify(errorData);
+    }
+
+    return json({ error: errorMessage }, { status: 500 });
   }
 
   return json({});

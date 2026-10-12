@@ -179,7 +179,6 @@ export const shopify = shopifyApp({
         },
       ],
       trialDays: 7,
-      replacementBehavior: BillingReplacementBehavior.ApplyImmediately,
     },
   },
 });
