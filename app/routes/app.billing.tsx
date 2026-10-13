@@ -229,32 +229,32 @@ export default function BillingPage() {
         onAction: () => navigate(`/app?shop=${encodeURIComponent(shop)}`),
       }}
     >
-      <BlockStack gap="500">
-        {actionData?.error && (
-          <Banner tone="critical">
-            <Text as="p" variant="bodyMd">
-              {String(actionData.error)}
-            </Text>
-          </Banner>
-        )}
+      <div style={{ maxWidth: "720px", margin: "0 auto", width: "100%" }}>
+        <BlockStack gap="500">
+          {actionData?.error && (
+            <Banner tone="critical">
+              <Text as="p" variant="bodyMd">
+                {String(actionData.error)}
+              </Text>
+            </Banner>
+          )}
 
-        {actionData?.cancelled && (
+          {actionData?.cancelled && (
+            <Banner tone="info">
+              <Text as="p" variant="bodyMd">
+                Subscription canceled. You will not be billed.
+              </Text>
+            </Banner>
+          )}
+
           <Banner tone="info">
-            <Text as="p" variant="bodyMd">
-              Subscription canceled. You will not be billed.
+            <Text as="p" variant="bodySm">
+              All subscription charges are handled natively through Shopify's secure billing system. Every new merchant
+              receives a <strong>risk-free 7-day trial</strong>. You can cancel at any time directly in your Shopify Admin
+              with zero lock-in or penalties.
             </Text>
           </Banner>
-        )}
 
-        <Banner tone="info">
-          <Text as="p" variant="bodySm">
-            All subscription charges are handled natively through Shopify's secure billing system. Every new merchant
-            receives a <strong>risk-free 7-day trial</strong>. You can cancel at any time directly in your Shopify Admin
-            with zero lock-in or penalties.
-          </Text>
-        </Banner>
-
-        <div style={{ maxWidth: "680px", margin: "0 auto", width: "100%" }}>
           <Box
             padding="600"
             background="bg-surface"
@@ -414,8 +414,8 @@ export default function BillingPage() {
               )}
             </BlockStack>
           </Box>
-        </div>
-      </BlockStack>
+        </BlockStack>
+      </div>
     </Page>
   );
 }
