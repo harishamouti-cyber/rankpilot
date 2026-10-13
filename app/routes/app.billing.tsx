@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Form, useActionData, useLoaderData, useNavigate, useNavigation } from "@remix-run/react";
-import React, { useState } from "react";
+import React from "react";
 import {
   Page,
   Text,
@@ -31,7 +31,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const { billing, session } = await authenticate.admin(request);
     shop = session.shop;
 
-    // Check with Shopify live billing API (includes test charges for dev/reviewer stores)
+    // Check with Shopify live billing API
     const billingCheck = await billing.check({
       plans: [MONTHLY_PLAN],
       isTest: true,
@@ -99,10 +99,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const setting = await db.appSetting.findUnique({ where: { shop } });
 
+  const storeHandle = shop.replace(".myshopify.com", "");
+  const referer = request.headers.get("referer") || "";
+  const match = referer.match(/\/apps\/([^/?#]+)/);
+  const appHandle = match ? match[1] : (url.searchParams.get("handle") || "rankpilot-39");
+  const managedPricingUrl = `https://admin.shopify.com/store/${storeHandle}/charges/${appHandle}/pricing_plans`;
+
   return json({
     shop,
     plans: PLANS,
     hasActiveSubscription,
+    managedPricingUrl,
     subscriptionId: activeSub?.id || setting?.subscriptionId || null,
     trialEndsAt: activeSub?.currentPeriodEnd || setting?.trialEndsAt?.toISOString() || null,
   });
@@ -118,11 +125,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const formData = await request.formData();
     const intent = formData.get("intent");
 
+    const storeHandle = session.shop.replace(".myshopify.com", "");
+    const referer = request.headers.get("referer") || "";
+    const match = referer.match(/\/apps\/([^/?#]+)/);
+    const appHandle = match ? match[1] : (url.searchParams.get("handle") || "rankpilot-39");
+    const managedPricingUrl = `https://admin.shopify.com/store/${storeHandle}/charges/${appHandle}/pricing_plans`;
+
     if (intent === "subscribe") {
-      // billing.request handles returnUrl and App Bridge exit-iframe reauthorization headers automatically
-      return await billing.request({
-        plan: MONTHLY_PLAN,
-        isTest: true,
+      // Direct top-level redirection to Shopify App Pricing (Managed Pricing)
+      throw new Response(undefined, {
+        status: 401,
+        statusText: "Unauthorized",
+        headers: {
+          "X-Shopify-API-Request-Failure-Reauthorize-Url": managedPricingUrl,
+        },
       });
     }
 
@@ -185,13 +201,24 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function BillingPage() {
-  const { shop, hasActiveSubscription, subscriptionId, trialEndsAt } = useLoaderData<typeof loader>();
+  const { shop, hasActiveSubscription, subscriptionId, trialEndsAt, managedPricingUrl } =
+    useLoaderData<typeof loader>();
   const actionData = useActionData<{ error?: string; cancelled?: boolean }>();
   const navigation = useNavigation();
   const navigate = useNavigate();
 
   const isUpdating = navigation.state === "submitting" && navigation.formData?.get("intent") === "subscribe";
   const isCanceling = navigation.state === "submitting" && navigation.formData?.get("intent") === "cancel";
+
+  const handleStartTrial = () => {
+    if (managedPricingUrl) {
+      if (window.top) {
+        window.top.location.href = managedPricingUrl;
+      } else {
+        window.location.href = managedPricingUrl;
+      }
+    }
+  };
 
   return (
     <Page
@@ -263,14 +290,14 @@ export default function BillingPage() {
               <Box padding="300" background="bg-surface-secondary" borderRadius="200">
                 <InlineStack align="space-between" blockAlign="center">
                   <BlockStack gap="050">
-                    <InlineStack gap="100" blockAlign="baseline">
+                    <div style={{ display: "inline-flex", alignItems: "baseline", gap: "6px" }}>
                       <Text as="span" variant="heading3xl" fontWeight="bold">
                         $29
                       </Text>
                       <Text as="span" variant="bodyMd" tone="subdued">
                         / month (USD)
                       </Text>
-                    </InlineStack>
+                    </div>
                     <Text as="p" variant="bodySm" tone="subdued">
                       Includes 7-Day Free Trial • Cancel anytime with 1 click
                     </Text>
@@ -367,13 +394,13 @@ export default function BillingPage() {
                 </BlockStack>
               ) : (
                 <BlockStack gap="300">
-                  <Form method="post">
+                  <Form method="post" onSubmit={handleStartTrial}>
                     <input type="hidden" name="intent" value="subscribe" />
                     <Button
                       variant="primary"
                       size="large"
                       fullWidth
-                      submit
+                      onClick={handleStartTrial}
                       loading={isUpdating}
                     >
                       Start 7-Day Free Trial ($29/month)
