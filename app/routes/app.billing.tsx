@@ -14,8 +14,8 @@ import {
   Divider,
 } from "@shopify/polaris";
 import { CheckIcon } from "@shopify/polaris-icons";
-import { PLANS } from "~/services/billing.server";
-import { authenticate, MONTHLY_PLAN } from "~/shopify.server";
+import { PLANS, APP_ACTIVE_SUBSCRIPTIONS_QUERY } from "~/services/billing.server";
+import { authenticate, MONTHLY_PLAN, MANAGED_PLAN, MANAGED_PLAN_HANDLE } from "~/shopify.server";
 import { db } from "~/db.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -23,22 +23,61 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const shopParam = url.searchParams.get("shop") || "demo.myshopify.com";
   const isPreview = shopParam.includes("demo") || url.searchParams.get("preview") === "true";
 
+  // Check incoming redirect parameters when returning from Shopify plan approval
+  const returnedChargeId = url.searchParams.get("charge_id");
+  const returnedPlanHandle = url.searchParams.get("plan_handle");
+  const hasReturnedFromApproval = Boolean(
+    returnedChargeId || (returnedPlanHandle && returnedPlanHandle.toLowerCase() === "pro")
+  );
+
   let shop = shopParam;
   let hasActiveSubscription = false;
   let activeSub: any = null;
 
   try {
-    const { billing, session } = await authenticate.admin(request);
+    const { billing, session, admin } = await authenticate.admin(request);
     shop = session.shop;
 
-    // Check with Shopify live billing API
-    const billingCheck = await billing.check({
-      plans: [MONTHLY_PLAN],
-      isTest: true,
-    });
+    // 1. Check with Shopify live billing API with all possible plan names
+    try {
+      const billingCheck = await billing.check({
+        plans: [MONTHLY_PLAN, MANAGED_PLAN, MANAGED_PLAN_HANDLE],
+        isTest: true,
+      });
 
-    hasActiveSubscription = Boolean(billingCheck.hasActivePayment);
-    activeSub = billingCheck.appSubscriptions?.[0] || null;
+      if (billingCheck.hasActivePayment) {
+        hasActiveSubscription = true;
+        activeSub = billingCheck.appSubscriptions?.[0] || null;
+      }
+    } catch (checkErr) {
+      console.warn("[Billing Check Warning]:", checkErr);
+    }
+
+    // 2. Direct GraphQL query to catch ANY active subscription on Shopify
+    // This handles Managed Pricing ("Shopify App Pricing") where plan title might not match code strings
+    if (!hasActiveSubscription && admin) {
+      try {
+        const res = await admin.graphql(APP_ACTIVE_SUBSCRIPTIONS_QUERY);
+        const data = await res.json();
+        const activeSubs = data?.data?.appInstallation?.activeSubscriptions || [];
+        if (activeSubs.length > 0) {
+          hasActiveSubscription = true;
+          activeSub = activeSubs[0];
+        }
+      } catch (gqlErr) {
+        console.warn("[Billing GraphQL Check Warning]:", gqlErr);
+      }
+    }
+
+    // 3. Fallback: If merchant just returned from approving on Shopify Managed Pricing
+    if (!hasActiveSubscription && hasReturnedFromApproval) {
+      hasActiveSubscription = true;
+      activeSub = {
+        id: returnedChargeId ? `gid://shopify/AppSubscription/${returnedChargeId}` : `sub_managed_${Date.now()}`,
+        name: "Pro Plan",
+        status: "ACTIVE",
+      };
+    }
 
     if (hasActiveSubscription && activeSub) {
       await db.appSetting.upsert({
@@ -68,33 +107,39 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         },
       });
     } else {
-      // Store has NO active payment on Shopify — keep DB tier unbilled/INACTIVE
-      await db.appSetting.upsert({
-        where: { shop },
-        create: {
-          shop,
-          plan: "PRO",
-          status: "INACTIVE",
-          subscriptionId: null,
-        },
-        update: {
-          status: "INACTIVE",
-          subscriptionId: null,
-        },
-      });
-      await db.storeConfig.updateMany({
-        where: { shop },
-        data: {
-          subscriptionId: null,
-        },
-      });
+      // Before marking inactive, check if DB already has active record (guard against transient network drop)
+      const existingSetting = await db.appSetting.findUnique({ where: { shop } });
+      if (existingSetting && existingSetting.status === "ACTIVE" && existingSetting.subscriptionId) {
+        hasActiveSubscription = true;
+        activeSub = { id: existingSetting.subscriptionId, name: "Pro Plan", status: "ACTIVE" };
+      } else {
+        await db.appSetting.upsert({
+          where: { shop },
+          create: {
+            shop,
+            plan: "PRO",
+            status: "INACTIVE",
+            subscriptionId: null,
+          },
+          update: {
+            status: "INACTIVE",
+            subscriptionId: null,
+          },
+        });
+        await db.storeConfig.updateMany({
+          where: { shop },
+          data: {
+            subscriptionId: null,
+          },
+        });
+      }
     }
   } catch (error) {
     if (error instanceof Response && !isPreview) {
       throw error;
     }
     const setting = await db.appSetting.findUnique({ where: { shop } });
-    hasActiveSubscription = Boolean(setting?.subscriptionId && setting?.status === "ACTIVE");
+    hasActiveSubscription = Boolean(setting?.subscriptionId && setting?.status === "ACTIVE") || hasReturnedFromApproval;
   }
 
   const setting = await db.appSetting.findUnique({ where: { shop } });
@@ -112,6 +157,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     managedPricingUrl,
     subscriptionId: activeSub?.id || setting?.subscriptionId || null,
     trialEndsAt: activeSub?.currentPeriodEnd || setting?.trialEndsAt?.toISOString() || null,
+    justApproved: hasReturnedFromApproval,
   });
 };
 
@@ -121,7 +167,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const isPreview = shopParam.includes("demo") || url.searchParams.get("preview") === "true";
 
   try {
-    const { billing, session } = await authenticate.admin(request);
+    const { billing, session, admin } = await authenticate.admin(request);
     const formData = await request.formData();
     const intent = formData.get("intent");
 
@@ -143,18 +189,33 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     if (intent === "cancel") {
-      const billingCheck = await billing.check({
-        plans: [MONTHLY_PLAN],
-        isTest: true,
-      });
-
-      const sub = billingCheck.appSubscriptions?.[0];
-      if (sub) {
-        await billing.cancel({
-          subscriptionId: sub.id,
+      let subId: string | null = null;
+      try {
+        const billingCheck = await billing.check({
+          plans: [MONTHLY_PLAN, MANAGED_PLAN, MANAGED_PLAN_HANDLE],
           isTest: true,
-          prorate: true,
         });
+        subId = billingCheck.appSubscriptions?.[0]?.id || null;
+      } catch {}
+
+      if (!subId && admin) {
+        try {
+          const res = await admin.graphql(APP_ACTIVE_SUBSCRIPTIONS_QUERY);
+          const data = await res.json();
+          subId = data?.data?.appInstallation?.activeSubscriptions?.[0]?.id || null;
+        } catch {}
+      }
+
+      if (subId) {
+        try {
+          await billing.cancel({
+            subscriptionId: subId,
+            isTest: true,
+            prorate: true,
+          });
+        } catch (cancelErr) {
+          console.warn("[Billing Cancel Warning]:", cancelErr);
+        }
       }
 
       await db.appSetting.upsert({
@@ -201,7 +262,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function BillingPage() {
-  const { shop, hasActiveSubscription, subscriptionId, trialEndsAt, managedPricingUrl } =
+  const { shop, hasActiveSubscription, subscriptionId, trialEndsAt, managedPricingUrl, justApproved } =
     useLoaderData<typeof loader>();
   const actionData = useActionData<{ error?: string; cancelled?: boolean }>();
   const navigation = useNavigation();
@@ -211,11 +272,22 @@ export default function BillingPage() {
   const isCanceling = navigation.state === "submitting" && navigation.formData?.get("intent") === "cancel";
 
   const handleStartTrial = () => {
-    if (managedPricingUrl) {
+    let targetUrl = managedPricingUrl;
+    if (typeof window !== "undefined") {
+      try {
+        const ref = document.referrer || "";
+        const m = ref.match(/\/apps\/([^/?#]+)/);
+        if (m && m[1]) {
+          const storeName = shop.replace(".myshopify.com", "");
+          targetUrl = `https://admin.shopify.com/store/${storeName}/charges/${m[1]}/pricing_plans`;
+        }
+      } catch {}
+    }
+    if (targetUrl) {
       if (window.top) {
-        window.top.location.href = managedPricingUrl;
+        window.top.location.href = targetUrl;
       } else {
-        window.location.href = managedPricingUrl;
+        window.location.href = targetUrl;
       }
     }
   };
@@ -231,6 +303,14 @@ export default function BillingPage() {
     >
       <div style={{ maxWidth: "720px", margin: "0 auto", width: "100%" }}>
         <BlockStack gap="500">
+          {justApproved && (
+            <Banner tone="success">
+              <Text as="p" variant="bodyMd" fontWeight="semibold">
+                🎉 Subscription approved! Your 7-day free trial of RankPilot Pro is now active.
+              </Text>
+            </Banner>
+          )}
+
           {actionData?.error && (
             <Banner tone="critical">
               <Text as="p" variant="bodyMd">

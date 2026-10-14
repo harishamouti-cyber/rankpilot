@@ -12,6 +12,8 @@ import { SessionStorage } from "@shopify/shopify-app-session-storage";
 import { db } from "./db.server";
 
 export const MONTHLY_PLAN = "RankPilot Pro";
+export const MANAGED_PLAN = "Pro Plan";
+export const MANAGED_PLAN_HANDLE = "pro";
 
 const memorySessionCache = new Map<string, Session>();
 
@@ -171,6 +173,26 @@ export const shopify = shopifyApp({
   },
   billing: {
     [MONTHLY_PLAN]: {
+      lineItems: [
+        {
+          amount: 29.0,
+          currencyCode: "USD",
+          interval: BillingInterval.Every30Days,
+        },
+      ],
+      trialDays: 7,
+    },
+    [MANAGED_PLAN]: {
+      lineItems: [
+        {
+          amount: 29.0,
+          currencyCode: "USD",
+          interval: BillingInterval.Every30Days,
+        },
+      ],
+      trialDays: 7,
+    },
+    [MANAGED_PLAN_HANDLE]: {
       lineItems: [
         {
           amount: 29.0,

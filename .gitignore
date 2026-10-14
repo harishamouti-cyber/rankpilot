@@ -16,3 +16,5 @@ dev.sqlite-journal
 *.log
 videos_temp/
 scratch/
+*.webm
+public/recordings/
