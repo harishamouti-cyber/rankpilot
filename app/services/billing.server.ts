@@ -83,12 +83,14 @@ export const APP_SUBSCRIPTION_CANCEL_MUTATION = `#graphql
 
 export const APP_ACTIVE_SUBSCRIPTIONS_QUERY = `#graphql
   query getActiveAppSubscriptions {
-    appInstallation {
+    currentAppInstallation {
       activeSubscriptions {
         id
         name
         status
         test
+        trialDays
+        createdAt
         currentPeriodEnd
         lineItems {
           plan {
@@ -109,7 +111,7 @@ export const APP_ACTIVE_SUBSCRIPTIONS_QUERY = `#graphql
 `;
 
 /**
- * Dynamically queries Shopify Admin GraphQL appInstallation.activeSubscriptions
+ * Dynamically queries Shopify Admin GraphQL currentAppInstallation.activeSubscriptions
  * and synchronizes with local database.
  */
 export async function verifyActiveSubscription(
@@ -120,7 +122,10 @@ export async function verifyActiveSubscription(
     try {
       const res = await adminClient.graphql(APP_ACTIVE_SUBSCRIPTIONS_QUERY);
       const data = await res.json();
-      const activeSubs = data?.data?.appInstallation?.activeSubscriptions || [];
+      const activeSubs =
+        data?.data?.currentAppInstallation?.activeSubscriptions ||
+        data?.data?.appInstallation?.activeSubscriptions ||
+        [];
       if (activeSubs.length > 0) {
         const sub = activeSubs[0];
         await db.appSetting.upsert({
