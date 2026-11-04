@@ -158,18 +158,18 @@ export default function SettingsRoute() {
                 <BlockStack gap="400">
                   <InlineStack align="space-between" blockAlign="center">
                     <Text as="h3" variant="headingMd" fontWeight="bold">
-                      Autopilot 24/7 Catalog Guard
+                      Autopilot Catalog Guard
                     </Text>
                     <Badge tone={autopilotEnabled ? "success" : "attention"}>
                       {autopilotEnabled ? "Active" : "Paused"}
                     </Badge>
                   </InlineStack>
                   <Text as="p" variant="bodySm" tone="subdued">
-                    When enabled, RankPilot continuously audits your store for newly added products, inventory stockouts,
-                    and schema drift, automatically healing metafields with zero merchant effort.
+                    When enabled, RankPilot re-checks your store for newly added products, inventory stockouts,
+                    and schema drift, and repairs metafields when product changes are received.
                   </Text>
                   <Checkbox
-                    label="Enable 24/7 Autopilot Catalog Scanner & Drift Sentinel"
+                    label="Enable Autopilot catalog scanning & drift repair"
                     checked={autopilotEnabled}
                     onChange={setAutopilotEnabled}
                   />
@@ -270,7 +270,7 @@ export default function SettingsRoute() {
                     <Text as="span" variant="bodySm" tone="subdued">
                       Storefront Speed:
                     </Text>
-                    <Badge tone="success">0ms Overhead</Badge>
+                    <Badge tone="success">No scripts added</Badge>
                   </InlineStack>
                   <InlineStack align="space-between">
                     <Text as="span" variant="bodySm" tone="subdued">
@@ -278,14 +278,6 @@ export default function SettingsRoute() {
                     </Text>
                     <Text as="span" variant="bodySm" fontWeight="semibold">
                       100% GraphQL Metafields
-                    </Text>
-                  </InlineStack>
-                  <InlineStack align="space-between">
-                    <Text as="span" variant="bodySm" tone="subdued">
-                      Core Web Vitals:
-                    </Text>
-                    <Text as="span" variant="bodySm" fontWeight="semibold">
-                      CLS ≤ 0.05 / INP &lt; 50ms
                     </Text>
                   </InlineStack>
                 </BlockStack>
@@ -313,7 +305,7 @@ export default function SettingsRoute() {
       <Modal
         open={isCancelModalOpen}
         onClose={() => setIsCancelModalOpen(false)}
-        title="⚠️ Pause RankPilot & Retain Your AI Search Rankings"
+        title="Pause RankPilot & Retain Your AI Search Rankings"
         primaryAction={{
           content: "Keep Schemas Live for $9/mo",
           onAction: handleAcceptPausePlan,
@@ -341,13 +333,13 @@ export default function SettingsRoute() {
             <Box padding="300" background="bg-surface-secondary" borderRadius="200">
               <BlockStack gap="200">
                 <Text as="p" variant="bodySm">
-                  ❌ <strong>Loss of AI Citations:</strong> LLM crawlers will no longer find structured FAQ and spec entities.
+                  <strong>Loss of AI Citations:</strong> LLM crawlers will no longer find structured FAQ and spec entities.
                 </Text>
                 <Text as="p" variant="bodySm">
-                  ❌ <strong>Broken Stockout Rerouting:</strong> AI queries will land on dead stockout pages instead of live variants.
+                  <strong>Broken Stockout Rerouting:</strong> AI queries will land on dead stockout pages instead of live variants.
                 </Text>
                 <Text as="p" variant="bodySm">
-                  ❌ <strong>Drift Vulnerability:</strong> Future theme updates will permanently wipe existing storefront schemas.
+                  <strong>Drift Vulnerability:</strong> Schema drift from theme or app changes will no longer be repaired.
                 </Text>
               </BlockStack>
             </Box>

@@ -12,12 +12,14 @@ import {
   Divider,
   ProgressBar,
   Banner,
+  Icon,
   TextField,
 } from "@shopify/polaris";
 import {
   UndoIcon,
   ClipboardIcon,
   RefreshIcon,
+  ImageIcon,
 } from "@shopify/polaris-icons";
 import { ShopifyProductItem } from "~/services/shopify.server";
 import { OptimizationResult } from "~/services/gemini.server";
@@ -147,7 +149,7 @@ export function OptimizationModal({
                   </Badge>
                 </InlineStack>
                 <InlineStack gap="150">
-                  <Badge tone="info">0ms Storefront Impact</Badge>
+                  <Badge tone="info">No storefront scripts</Badge>
                   <Badge tone="success">Ready for ChatGPT &amp; Google AI</Badge>
                 </InlineStack>
               </InlineStack>
@@ -279,7 +281,7 @@ export function OptimizationModal({
                             />
                           ) : (
                             <div style={{ width: 44, height: 44, background: "#f1f2f4", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
-                              🖼️
+                              <Icon source={ImageIcon} tone="subdued" />
                             </div>
                           )}
                           <BlockStack gap="050">
@@ -403,7 +405,7 @@ export function OptimizationModal({
                   <BlockStack gap="300">
                     <InlineStack align="space-between" blockAlign="center">
                       <Text as="h3" variant="headingSm" tone="success" fontWeight="bold">
-                        ✦ RANKPILOT AI SUPERCHARGED
+                        RANKPILOT OPTIMIZED
                       </Text>
                       <Badge tone="success">
                         96/100 (AI &amp; Google Ready)
@@ -466,7 +468,7 @@ export function OptimizationModal({
                             />
                           ) : (
                             <div style={{ width: 44, height: 44, background: "#ecfdf5", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0, marginTop: 4 }}>
-                              📷
+                              <Icon source={ImageIcon} tone="success" />
                             </div>
                           )}
                           <div style={{ flex: 1 }}>
@@ -719,6 +721,12 @@ export function OptimizationModal({
                 </Button>
               </InlineStack>
 
+              <Banner tone="info">
+                <Text as="p" variant="bodySm">
+                  Illustrative preview of how AI search engines could present this product using the optimized data. This is not a live search result.
+                </Text>
+              </Banner>
+
               {/* ENGINE 1: GOOGLE AI OVERVIEW */}
               {simulationEngine === "google" && (
                 <Box
@@ -766,7 +774,7 @@ export function OptimizationModal({
                           cursor: "pointer",
                         }}
                       >
-                        🔗 demo.myshopify.com/products/{product.handle}
+                        /products/{product.handle}
                       </div>
                       <div
                         style={{
@@ -778,7 +786,7 @@ export function OptimizationModal({
                           fontWeight: 500,
                         }}
                       >
-                        ✓ Verified Price: ${product.priceRange.minVariantPrice.amount} {product.priceRange.minVariantPrice.currencyCode}
+                        Price: ${product.priceRange.minVariantPrice.amount} {product.priceRange.minVariantPrice.currencyCode}
                       </div>
                       <div
                         style={{
@@ -790,7 +798,7 @@ export function OptimizationModal({
                           fontWeight: 500,
                         }}
                       >
-                        ✓ In Stock &amp; Ships in 24-48h
+                        Spec table &amp; FAQs
                       </div>
                       <div
                         style={{
@@ -802,7 +810,7 @@ export function OptimizationModal({
                           fontWeight: 500,
                         }}
                       >
-                        📷 Visual Grounding: Alt text verified for Google Images
+                        Image alt text included
                       </div>
                     </InlineStack>
 
@@ -841,13 +849,13 @@ export function OptimizationModal({
                             <tbody>
                               <tr style={{ backgroundColor: "#e6f4ea", fontWeight: 600 }}>
                                 <td style={{ padding: "8px 12px", borderBottom: "1px solid #ceead6" }}>
-                                  ⭐ {optimization.seoTitle.split("|")[0].trim() || product.title} (Your Store)
+                                  {optimization.seoTitle.split("|")[0].trim() || product.title} (Your Store)
                                 </td>
                                 <td style={{ padding: "8px 12px", borderBottom: "1px solid #ceead6" }}>
                                   Precision Engineering + Full Spec Matrix
                                 </td>
                                 <td style={{ padding: "8px 12px", borderBottom: "1px solid #ceead6" }}>
-                                  Verified durability &amp; 30-day buyer trial
+                                  Full spec table &amp; buyer FAQs
                                 </td>
                                 <td style={{ padding: "8px 12px", borderBottom: "1px solid #ceead6" }}>
                                   ${product.priceRange.minVariantPrice.amount} (In Stock)
@@ -1031,7 +1039,7 @@ export function OptimizationModal({
 
                     <div style={{ backgroundColor: "#f8f9fa", padding: "12px", borderRadius: 8, fontSize: 13, lineHeight: 1.5 }}>
                       • <strong>Official Pricing:</strong> Retails at ${product.priceRange.minVariantPrice.amount} {product.priceRange.minVariantPrice.currencyCode} directly through authorized merchant storefront [1].<br />
-                      • <strong>Specifications:</strong> Features verified dimension matrix and thermal engineering [2].<br />
+                      • <strong>Specifications:</strong> Structured specification table from your product data [2].<br />
                       • <strong>Buyer Satisfaction:</strong> Supported by dedicated buyer FAQ resolving sizing and warranty concerns [1, 3].
                     </div>
                   </BlockStack>
@@ -1121,7 +1129,7 @@ export function OptimizationModal({
                   tone="success"
                   onClick={onClose}
                 >
-                  ✓ Done (Close)
+                  Done
                 </Button>
               </ButtonGroup>
             ) : (

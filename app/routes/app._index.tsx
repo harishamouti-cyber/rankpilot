@@ -339,13 +339,8 @@ export default function AppDashboard() {
           }));
           const duration = Math.max(0.2, (performance.now() - startTime) / 1000).toFixed(1);
           setToastTone("success");
-          const msg = `✓ Catalog synced in ${duration}s! ${merged.length} live product(s) loaded from your Shopify store.`;
+          const msg = `Catalog synced in ${duration}s! ${merged.length} live product(s) loaded from your Shopify store.`;
           setToastMessage(msg);
-          if (typeof window !== "undefined" && (window as any).shopify?.toast?.show) {
-            try {
-              (window as any).shopify.toast.show(msg);
-            } catch {}
-          }
         } else {
           setProducts([]);
           setMetrics((prev) => ({
@@ -446,14 +441,15 @@ export default function AppDashboard() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastTone, setToastTone] = useState<"success" | "critical" | "info">("success");
 
-  // 3-second auto-dismiss for floating toast notifications
+  // Single source of truth for notifications: the native App Bridge toast.
   useEffect(() => {
     if (!toastMessage) return;
-    const timer = setTimeout(() => {
-      setToastMessage(null);
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [toastMessage]);
+    const text = toastMessage.replace(/^[✓⏳]\s*/, "");
+    try {
+      (window as any).shopify?.toast?.show(text, { isError: toastTone === "critical", duration: 5000 });
+    } catch {}
+    setToastMessage(null);
+  }, [toastMessage, toastTone]);
 
   // Active product modals state
   const [activeModal, setActiveModal] = useState<"optimize" | "competitor" | "revisions" | "settings" | null>(null);
@@ -746,13 +742,8 @@ export default function AppDashboard() {
     setIsApplying(true);
     setApplyError(null);
     setToastTone("info");
-    const pushMsg = `⏳ Pushing "${product.title}" to Shopify store... Updating product description, specs, and FAQs.`;
+    const pushMsg = `Pushing "${product.title}" to Shopify store... Updating product description, specs, and FAQs.`;
     setToastMessage(pushMsg);
-    if (typeof window !== "undefined" && (window as any).shopify?.toast?.show) {
-      try {
-        (window as any).shopify.toast.show(`Pushing "${product.title}" to store...`);
-      } catch {}
-    }
 
     try {
       const res = await appFetch("/api/apply", {
@@ -832,26 +823,16 @@ export default function AppDashboard() {
       });
 
       setToastTone("success");
-      const successMsg = `✓ "${product.title}" pushed to Shopify store! Description, Spec Table & FAQs are now live in your store. ${
+      const successMsg = `"${product.title}" pushed to Shopify store! Description, Spec Table & FAQs are now live in your store. ${
         data.indexNowPinged ? "IndexNow ping dispatched to search engines." : ""
       }`;
       setToastMessage(successMsg);
-      if (typeof window !== "undefined" && (window as any).shopify?.toast?.show) {
-        try {
-          (window as any).shopify.toast.show(successMsg);
-        } catch {}
-      }
     } catch (err: any) {
       console.error("[handleApplyOptimization] Push error:", err);
       setApplyError(err.message || "Failed to push to Shopify");
       setToastTone("critical");
       const errorMsg = `Shopify push failed: ${err.message}`;
       setToastMessage(errorMsg);
-      if (typeof window !== "undefined" && (window as any).shopify?.toast?.show) {
-        try {
-          (window as any).shopify.toast.show(errorMsg, { isError: true });
-        } catch {}
-      }
     } finally {
       setIsApplying(false);
     }
@@ -916,7 +897,7 @@ export default function AppDashboard() {
 
       setActiveModal(null);
       setToastTone("success");
-      setToastMessage("✓ Product restored to original snapshot state in 1 click.");
+      setToastMessage("Product restored to original snapshot state .");
     } catch (err: any) {
       setToastTone("critical");
       setToastMessage(`Rollback failed: ${err.message}`);
@@ -1057,7 +1038,7 @@ export default function AppDashboard() {
 
     setIsOptimizing(false);
     setToastTone("success");
-    setToastMessage(`✓ Bulk optimization complete! ${successCount} product(s) optimized & synced to store.`);
+    setToastMessage(`Bulk optimization complete! ${successCount} product(s) optimized & synced to store.`);
   };
 
   // Settings Save
@@ -1075,7 +1056,7 @@ export default function AppDashboard() {
       if (!res.ok) throw new Error("Failed to save settings");
       setActiveModal(null);
       setToastTone("success");
-      setToastMessage("✓ RankPilot settings saved successfully.");
+      setToastMessage("RankPilot settings saved successfully.");
       revalidator.revalidate();
     } catch (err: any) {
       setToastTone("critical");
@@ -1102,7 +1083,7 @@ export default function AppDashboard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "IndexNow ping failed");
       setToastTone("success");
-      setToastMessage(`✓ IndexNow Ping: ${data.result.message}`);
+      setToastMessage(`IndexNow Ping: ${data.result.message}`);
       revalidator.revalidate();
     } catch (err: any) {
       setToastTone("critical");
@@ -1125,7 +1106,7 @@ export default function AppDashboard() {
       if (!res.ok) throw new Error(data.error || "Autopilot scan failed");
       setToastTone("success");
       setToastMessage(
-        `✓ Autopilot Scan Completed: Scanned ${data.result.totalScanned} products. ${data.result.inventoryTransitions} schema transitions, ${data.result.autoOptimizedCount} auto-optimized.`
+        `Autopilot Scan Completed: Scanned ${data.result.totalScanned} products. ${data.result.inventoryTransitions} schema transitions, ${data.result.autoOptimizedCount} auto-optimized.`
       );
       revalidator.revalidate();
     } catch (e: any) {
@@ -1151,7 +1132,7 @@ export default function AppDashboard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Re-index ping failed");
       setToastTone("success");
-      setToastMessage(`✓ Instant IndexNow ping dispatched for "${product.title}" (Bing, Yandex, Perplexity).`);
+      setToastMessage(`Instant IndexNow ping dispatched for "${product.title}" (Bing, Yandex, Perplexity).`);
       setMetrics((prev) => ({ ...prev, indexPingsCount: prev.indexPingsCount + 1 }));
     } catch (err: any) {
       setToastTone("critical");
@@ -1462,46 +1443,6 @@ export default function AppDashboard() {
       ]}
     >
       <BlockStack gap="500">
-        {toastMessage && (
-          <div
-            id="rankpilot-toast"
-            className="rankpilot-custom-toast"
-            style={{
-              position: "fixed",
-              bottom: 24,
-              right: 24,
-              zIndex: 9999,
-              backgroundColor: toastTone === "critical" ? "#b91c1c" : toastTone === "info" ? "#1d4ed8" : "#0f172a",
-              color: "#ffffff",
-              padding: "12px 18px",
-              borderRadius: "8px",
-              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2)",
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              fontSize: "14px",
-              fontWeight: 500,
-              maxWidth: "460px",
-            }}
-          >
-            <span style={{ flex: 1 }}>{toastMessage}</span>
-            <button
-              onClick={() => setToastMessage(null)}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "#94a3b8",
-                cursor: "pointer",
-                padding: "2px",
-                fontSize: "18px",
-                lineHeight: 1,
-              }}
-              aria-label="Dismiss toast"
-            >
-              ×
-            </button>
-          </div>
-        )}
 
         {/* Schema Drift Sentinel Warning Banner */}
         {driftAudit && driftAudit.driftedCount > 0 && (
@@ -1616,7 +1557,7 @@ export default function AppDashboard() {
                 <BlockStack gap="050">
                   <InlineStack gap="200" blockAlign="center">
                     <Text as="h3" variant="headingSm" fontWeight="bold">
-                      Autopilot 24/7 Catalog Guard: ACTIVE
+                      Autopilot Catalog Guard: ACTIVE
                     </Text>
                     <Badge tone="success" size="small">
                       Auto-Detecting Drift
@@ -1626,7 +1567,7 @@ export default function AppDashboard() {
                     </Badge>
                   </InlineStack>
                   <Text as="p" variant="bodySm" tone="subdued">
-                    All catalog SKUs are GEO-synchronized with Google AI &amp; ChatGPT Search. 0ms storefront impact.
+                    All catalog SKUs are GEO-synchronized with Google AI &amp; ChatGPT Search. No scripts added to your storefront.
                   </Text>
                 </BlockStack>
               </InlineStack>
@@ -2000,7 +1941,7 @@ export default function AppDashboard() {
         <Box paddingBlock="300">
           <InlineStack align="center">
             <Text as="p" variant="bodySm" tone="subdued">
-              Pure Metafield Architecture • 0ms Storefront Liquid / ScriptTag Footprint
+              Metafield-based • No ScriptTags added to your storefront
             </Text>
           </InlineStack>
         </Box>

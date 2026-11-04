@@ -527,7 +527,7 @@ export default function BillingPage() {
           {justApproved && isSubscribed && (
             <Banner tone="success">
               <Text as="p" variant="bodyMd" fontWeight="semibold">
-                🎉 Subscription approved! Your 7-day free trial of RankPilot Pro is now active.
+                Subscription approved. Your 7-day free trial of RankPilot Pro is now active.
               </Text>
             </Banner>
           )}
@@ -600,12 +600,12 @@ export default function BillingPage() {
                       </Text>
                     </div>
                     <Text as="p" variant="bodySm" tone="subdued">
-                      Includes 7-Day Free Trial • Cancel anytime with 1 click
+                      Includes 7-Day Free Trial • Cancel anytime
                     </Text>
                   </BlockStack>
                   <div style={{ textAlign: "right" }}>
                     <Text as="p" variant="bodyXs" fontWeight="semibold" tone="success">
-                      ✓ No upfront charge today
+                      No upfront charge today
                     </Text>
                     <Text as="p" variant="bodyXs" tone="subdued">
                       Billed on your Shopify invoice
@@ -653,7 +653,7 @@ export default function BillingPage() {
                     <InlineStack align="space-between" blockAlign="center">
                       <BlockStack gap="050">
                         <Text as="p" variant="bodySm" fontWeight="bold">
-                          ✓ RankPilot Pro Active
+                          RankPilot Pro active
                         </Text>
                         <Text as="p" variant="bodyXs" tone="subdued">
                           {trialEndsAt
@@ -710,7 +710,7 @@ export default function BillingPage() {
                   </Form>
                   <Text as="p" variant="bodyXs" alignment="center" tone="subdued">
                     You won't be charged today. 7 full days of unrestricted access, then $29/mo billed directly to your Shopify
-                    account. Cancel anytime with 1 click.
+                    account. Cancel anytime.
                   </Text>
                 </BlockStack>
               )}

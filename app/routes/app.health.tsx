@@ -17,8 +17,6 @@ import {
   List,
 } from "@shopify/polaris";
 import {
-  CheckCircleIcon,
-  RefreshIcon,
   DatabaseIcon,
   ShieldCheckMarkIcon,
 } from "@shopify/polaris-icons";
@@ -186,7 +184,7 @@ export default function SystemHealthRoute() {
   return (
     <Page
       title="System Health & Metafield Diagnostics"
-      subtitle="Shopify App Store Enterprise Readiness, Webhook Verification & Schema Diagnostics"
+      subtitle="Metafield, schema, and webhook diagnostics"
       compactTitle
       backAction={{
         content: "Dashboard",
@@ -194,7 +192,6 @@ export default function SystemHealthRoute() {
       }}
       primaryAction={{
         content: "Re-sync Metafields",
-        icon: RefreshIcon,
         loading: isResyncing,
         onAction: handleResyncMetafields,
       }}
@@ -239,12 +236,9 @@ export default function SystemHealthRoute() {
           </Banner>
         ) : (
           <Banner tone="success">
-            <InlineStack gap="200" blockAlign="center">
-              <CheckCircleIcon width={20} height={20} fill="#008060" />
-              <Text as="p" variant="bodyMd" fontWeight="semibold">
-                {`All ${totalProducts} catalog products are synchronized with live Schema.org JSON-LD, spec matrices, and buyer FAQs.`}
-              </Text>
-            </InlineStack>
+            <Text as="p" variant="bodyMd">
+              {`All ${totalProducts} catalog products are synchronized with Schema.org JSON-LD, spec tables, and buyer FAQs.`}
+            </Text>
           </Banner>
         )}
 
@@ -320,19 +314,17 @@ export default function SystemHealthRoute() {
                     <Text as="p" variant="bodySm" tone="subdued">
                       WEBHOOK HEALTH
                     </Text>
-                    <Badge tone={activeWebhooksCount > 0 ? "success" : "info"}>
-                      {activeWebhooksCount > 0
-                        ? `${activeWebhooksCount} / ${webhooks.length} Active`
-                        : "Listening (Standby)"}
+                    <Badge tone="success">
+                      Subscribed
                     </Badge>
                   </InlineStack>
                   <Text as="h2" variant="headingXl" fontWeight="bold">
-                    {`${activeWebhooksCount} / ${webhooks.length}`}
+                    {`${webhooks.length} topics`}
                   </Text>
                   <Text as="p" variant="bodySm" tone="subdued">
                     {activeWebhooksCount > 0
-                      ? "Live event delivery verified"
-                      : "No webhook traffic received yet"}
+                      ? `${activeWebhooksCount} received events so far; others fire only when that event happens`
+                      : "No events received yet. Topics fire only when that event happens"}
                   </Text>
                 </BlockStack>
               </Box>
@@ -475,7 +467,7 @@ export default function SystemHealthRoute() {
                       tone={w.hasFired ? (w.status === "ACTIVE" ? "success" : "info") : undefined}
                       size="small"
                     >
-                      {w.hasFired ? w.status : "Standby"}
+                      {w.hasFired ? w.status : "Waiting for first event"}
                     </Badge>
                   </InlineStack>
                   <InlineStack gap="300" blockAlign="center">

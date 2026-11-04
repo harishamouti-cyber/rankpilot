@@ -189,7 +189,7 @@ export function PerformanceDigestModal({
                 <Text as="span" variant="bodySm">
                   Storefront Performance Impact
                 </Text>
-                <Badge tone="success">0ms (100% Metafield Execution)</Badge>
+                <Badge tone="success">No scripts (metafields only)</Badge>
               </InlineStack>
               <InlineStack align="space-between">
                 <Text as="span" variant="bodySm">

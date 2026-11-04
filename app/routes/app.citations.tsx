@@ -146,19 +146,18 @@ export default function CitationsPage() {
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // 3-second auto-dismiss for citations toast
   useEffect(() => {
     if (!toastMessage) return;
-    const timer = setTimeout(() => {
-      setToastMessage(null);
-    }, 3000);
-    return () => clearTimeout(timer);
+    try {
+      (window as any).shopify?.toast?.show(toastMessage, { duration: 5000 });
+    } catch {}
+    setToastMessage(null);
   }, [toastMessage]);
 
   useEffect(() => {
     if (fetcher.data?.success) {
       setToastMessage(
-        "✓ Real-time AI Search Engine audit completed across ChatGPT Search, Perplexity, and Google AI."
+        "AI search audit completed."
       );
     }
   }, [fetcher.data]);
@@ -262,44 +261,6 @@ export default function CitationsPage() {
       }}
     >
       <BlockStack gap="500">
-        {toastMessage && (
-          <div
-            style={{
-              position: "fixed",
-              bottom: 24,
-              right: 24,
-              zIndex: 9999,
-              backgroundColor: "#0f172a",
-              color: "#ffffff",
-              padding: "12px 18px",
-              borderRadius: "8px",
-              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2)",
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              fontSize: "14px",
-              fontWeight: 500,
-              maxWidth: "460px",
-            }}
-          >
-            <span style={{ flex: 1 }}>{toastMessage}</span>
-            <button
-              onClick={() => setToastMessage(null)}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "#94a3b8",
-                cursor: "pointer",
-                padding: "2px",
-                fontSize: "18px",
-                lineHeight: 1,
-              }}
-              aria-label="Dismiss toast"
-            >
-              ×
-            </button>
-          </div>
-        )}
 
         {/* TOP GEO SCORE & AI ENGINE READINESS HERO CARD */}
         <Card padding="500">

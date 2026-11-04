@@ -134,7 +134,7 @@ export function WelcomeModal({
                   <Badge tone="info" size="large">
                     AI SEO, GEO &amp; AI Search Overviews
                   </Badge>
-                  <Badge tone="success">0ms Storefront Speed Impact</Badge>
+                  <Badge tone="success">No storefront scripts</Badge>
                 </InlineStack>
 
                 <Text as="h2" variant="headingLg" fontWeight="bold">
