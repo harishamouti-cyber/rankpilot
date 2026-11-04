@@ -76,7 +76,8 @@ export function cleanCommercialProductTitle(rawTitle: string, vendor?: string): 
 
   // General purge of diagnostic/raw markers without altering the merchant's real product name
   let cleaned = rawTitle
-    .replace(/\b(raw|unoptimized|sample|test|demo|placeholder|draft|copy\s*of)\b/gi, "")
+    .replace(/^\s*copy\s+of\s+/i, "")
+    .replace(/\b(raw\s+)?unoptimized\b/gi, "")
     .replace(/\s{2,}/g, " ")
     .trim();
 
@@ -93,7 +94,7 @@ export function cleanCommercialProductTitle(rawTitle: string, vendor?: string): 
 function stripDiagnosticWords(text: string): string {
   if (!text) return "";
   return text
-    .replace(/\b(raw|unoptimized|sample|test|placeholder|draft)\b/gi, "")
+    .replace(/\b(raw\s+)?unoptimized\b/gi, "")
     .replace(/\s{2,}/g, " ")
     .trim();
 }

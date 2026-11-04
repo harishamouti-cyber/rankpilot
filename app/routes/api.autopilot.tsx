@@ -5,8 +5,9 @@ import { authenticate, unauthenticated } from "~/shopify.server";
 import { db } from "~/db.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { session: __rpSession } = await authenticate.admin(request);
+  const shop = __rpSession.shop;
   const url = new URL(request.url);
-  const shop = url.searchParams.get("shop") || "demo.myshopify.com";
 
   const logs = await getAutopilotLogs(shop);
   const setting = await db.appSetting.findUnique({ where: { shop } });
@@ -18,13 +19,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
+  const { session: __rpSession } = await authenticate.admin(request);
+  const shop = __rpSession.shop;
   if (request.method !== "POST") {
     return json({ error: "Method not allowed" }, { status: 405 });
   }
 
   try {
     const body = await request.json();
-    const { shop = "demo.myshopify.com", toggleEnabled } = body;
+    const { toggleEnabled } = body;
 
     let adminClient: any = null;
     let effectiveShop = shop;

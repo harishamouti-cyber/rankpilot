@@ -148,7 +148,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     title: v.title,
     sku: v.sku || null,
     price: v.price,
-    ...(tracked ? {} : { availableForSale: true }),
   }));
 
   const optimization = await optimizeProductWithAI(

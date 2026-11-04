@@ -11,13 +11,16 @@ import {
 import { authenticate, unauthenticated } from "~/shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { session: __rpSession } = await authenticate.admin(request);
+  const shop = __rpSession.shop;
   const url = new URL(request.url);
-  const shop = url.searchParams.get("shop") || "demo.myshopify.com";
   const currentPlan = await getCurrentPlan(shop);
   return json({ currentPlan, plans: PLANS });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
+  const { session: __rpSession } = await authenticate.admin(request);
+  const shop = __rpSession.shop;
   if (request.method !== "POST") {
     return json({ error: "Method not allowed" }, { status: 405 });
   }
@@ -25,7 +28,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     const body = await request.json();
     const {
-      shop = "demo.myshopify.com",
       planId = "PRO",
       action: billingAction = "create_subscription",
       returnUrl = `/app/billing?shop=${encodeURIComponent(shop)}`,

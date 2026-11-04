@@ -57,7 +57,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return json({
     shop,
     setting: {
-      geminiApiKey: setting.geminiApiKey || "",
+      geminiApiKey: setting.geminiApiKey ? `••••${setting.geminiApiKey.slice(-4)}` : "",
       indexNowKey: setting.indexNowKey || "rankpilot-demo-indexnow-key-2025",
       autoPingIndexNow: setting.autoPingIndexNow,
       autopilotEnabled: setting.autopilotEnabled,

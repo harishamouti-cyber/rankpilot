@@ -58,8 +58,9 @@ mutation CreateMetafieldDefinition($definition: MetafieldDefinitionInput!) {
 `;
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { session: __rpSession } = await authenticate.admin(request);
+  const shop = __rpSession.shop;
   const url = new URL(request.url);
-  const shop = url.searchParams.get("shop") || "demo.myshopify.com";
 
   let adminClient: any = null;
   try {
@@ -83,23 +84,22 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
+  const { session: __rpSession } = await authenticate.admin(request);
+  const shop = __rpSession.shop;
   if (request.method !== "POST") {
     return json({ error: "Method not allowed" }, { status: 405 });
   }
 
   let adminClient: any = null;
-  let shop = "demo.myshopify.com";
   let parsedBody: any = {};
   try {
     parsedBody = await request.json();
-    if (parsedBody?.shop) shop = parsedBody.shop;
   } catch {}
 
   try {
     const authResult = await authenticate.admin(request);
     adminClient = authResult.admin;
     if (authResult.session?.shop) {
-      shop = authResult.session.shop;
     }
   } catch {
     // Demo or development mode fallback

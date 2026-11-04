@@ -6,13 +6,15 @@ import { authenticate, unauthenticated } from "~/shopify.server";
 import { db } from "~/db.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
+  const { session: __rpSession } = await authenticate.admin(request);
+  const shop = __rpSession.shop;
   if (request.method !== "POST") {
     return json({ error: "Method not allowed" }, { status: 405 });
   }
 
   try {
     const body = await request.json();
-    const { productId, shop = "demo.myshopify.com", optimization, currentProduct: clientProduct } = body;
+    const { productId, optimization, currentProduct: clientProduct } = body;
 
     if (!productId || !optimization) {
       return json({ error: "productId and optimization are required" }, { status: 400 });

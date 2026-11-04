@@ -5,15 +5,16 @@ import { GET_PRODUCTS_QUERY, executeGraphQLWithThrottling } from "~/services/sho
 import { db } from "~/db.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  if (process.env.DIAGNOSTIC_ENABLED !== "true") return json({ error: "Not found" }, { status: 404 });
+  const { session: __rpSession } = await authenticate.admin(request);
+  const shop = __rpSession.shop;
   const url = new URL(request.url);
-  const shop = url.searchParams.get("shop") || "rankpilot-xk8wrvgu.myshopify.com";
 
   const diagnostics: Record<string, any> = {
     timestamp: new Date().toISOString(),
     shop,
     url: request.url,
     hasAuthHeader: Boolean(request.headers.get("authorization")),
-    authHeaderSnippet: request.headers.get("authorization") ? request.headers.get("authorization")?.slice(0, 20) + "..." : null,
     apiKeyConfigured: process.env.SHOPIFY_API_KEY ? "EXISTS" : "FALLBACK",
     apiSecretConfigured: process.env.SHOPIFY_API_SECRET ? "EXISTS" : "FALLBACK",
   };

@@ -1,15 +1,18 @@
 import type { ActionFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
+import { authenticate } from "~/shopify.server";
 import { extractCompetitorData, mineCompetitorReviewSentiment } from "~/services/competitor.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
+  const { session: __rpSession } = await authenticate.admin(request);
+  const shop = __rpSession.shop;
   if (request.method !== "POST") {
     return json({ error: "Method not allowed" }, { status: 405 });
   }
 
   try {
     const body = await request.json();
-    const { competitorUrl, productId, productTitle, shop = "demo.myshopify.com" } = body;
+    const { competitorUrl, productId, productTitle } = body;
 
     if (!competitorUrl || typeof competitorUrl !== "string") {
       return json({ error: "competitorUrl is required" }, { status: 400 });

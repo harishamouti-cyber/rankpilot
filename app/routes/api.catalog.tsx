@@ -5,8 +5,9 @@ import { getShopifyProducts } from "~/services/shopify.server";
 import { db } from "~/db.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { session: __rpSession } = await authenticate.admin(request);
+  const shop = __rpSession.shop;
   const url = new URL(request.url);
-  let shop = url.searchParams.get("shop") || "demo.myshopify.com";
   let adminClient: any = null;
   let authError: string | null = null;
 
@@ -14,7 +15,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const auth = await authenticate.admin(request);
     adminClient = auth.admin;
     if (auth.session?.shop) {
-      shop = auth.session.shop;
     }
   } catch (e: any) {
     authError = e?.message || (e instanceof Response ? `Response ${e.status}` : String(e));

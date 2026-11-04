@@ -4,13 +4,15 @@ import { rollbackProduct } from "~/services/shopify.server";
 import { authenticate, unauthenticated } from "~/shopify.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
+  const { session: __rpSession } = await authenticate.admin(request);
+  const shop = __rpSession.shop;
   if (request.method !== "POST") {
     return json({ error: "Method not allowed" }, { status: 405 });
   }
 
   try {
     const body = await request.json();
-    const { productId, shop = "demo.myshopify.com" } = body;
+    const { productId } = body;
 
     if (!productId) {
       return json({ error: "productId is required" }, { status: 400 });

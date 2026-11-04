@@ -1,10 +1,17 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
+import { authenticate } from "~/shopify.server";
 import { db } from "~/db.server";
 
+const MASK = "••••";
+export function maskSecret(v?: string | null) {
+  return v ? `${MASK}${v.slice(-4)}` : "";
+}
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { session: __rpSession } = await authenticate.admin(request);
+  const shop = __rpSession.shop;
   const url = new URL(request.url);
-  const shop = url.searchParams.get("shop") || "demo.myshopify.com";
 
   let setting = await db.appSetting.findUnique({ where: { shop } });
   if (!setting) {
@@ -21,7 +28,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return json({
     success: true,
     setting: {
-      geminiApiKey: setting.geminiApiKey || "",
+      geminiApiKey: maskSecret(setting.geminiApiKey),
       indexNowKey: setting.indexNowKey || "",
       autoPingIndexNow: setting.autoPingIndexNow,
       storeDomain: setting.storeDomain || "store.myshopify.com",
@@ -32,6 +39,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
+  const { session: __rpSession } = await authenticate.admin(request);
+  const shop = __rpSession.shop;
   if (request.method !== "POST") {
     return json({ error: "Method not allowed" }, { status: 405 });
   }
@@ -39,7 +48,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     const body = await request.json();
     const {
-      shop = "demo.myshopify.com",
       geminiApiKey,
       indexNowKey,
       autoPingIndexNow,
@@ -50,7 +58,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     } = body;
 
     const dataToUpdate: any = {};
-    if (geminiApiKey !== undefined) dataToUpdate.geminiApiKey = geminiApiKey?.trim() || null;
+    // Masked value coming back from the UI means "unchanged".
+    if (geminiApiKey !== undefined && !String(geminiApiKey).startsWith(MASK))
+      dataToUpdate.geminiApiKey = geminiApiKey?.trim() || null;
     if (indexNowKey !== undefined) dataToUpdate.indexNowKey = indexNowKey?.trim() || null;
     if (autoPingIndexNow !== undefined) dataToUpdate.autoPingIndexNow = autoPingIndexNow === true || autoPingIndexNow === "true";
     if (storeDomain !== undefined) dataToUpdate.storeDomain = storeDomain?.trim() || null;
@@ -83,9 +93,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
     }
 
-    return json({ success: true, setting: updated });
+    return json({
+      success: true,
+      setting: {
+        geminiApiKey: maskSecret(updated.geminiApiKey),
+        indexNowKey: updated.indexNowKey || "",
+        autoPingIndexNow: updated.autoPingIndexNow,
+        autopilotEnabled: updated.autopilotEnabled,
+        storeDomain: updated.storeDomain,
+        isOnboarded: updated.isOnboarded,
+        plan: updated.plan,
+      },
+    });
   } catch (error: any) {
-    console.error("api.settings error:", error);
-    return json({ error: error.message || "Failed to update settings" }, { status: 500 });
+    console.error("api.settings error:", error?.message);
+    return json({ error: "Failed to update settings" }, { status: 500 });
   }
 };

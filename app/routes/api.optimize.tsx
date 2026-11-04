@@ -7,13 +7,15 @@ import { authenticate, unauthenticated } from "~/shopify.server";
 import { db } from "~/db.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
+  const { session: __rpSession } = await authenticate.admin(request);
+  const shop = __rpSession.shop;
   if (request.method !== "POST") {
     return json({ error: "Method not allowed" }, { status: 405 });
   }
 
   try {
     const body = await request.json();
-    const { productId, shop = "demo.myshopify.com", competitorUrl, product: clientProduct } = body;
+    const { productId, competitorUrl, product: clientProduct } = body;
 
     if (!productId) {
       return json({ error: "productId is required" }, { status: 400 });
