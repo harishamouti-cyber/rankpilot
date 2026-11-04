@@ -897,7 +897,7 @@ export default function AppDashboard() {
 
       setActiveModal(null);
       setToastTone("success");
-      setToastMessage("Product restored to original snapshot state .");
+      setToastMessage("Product restored to original snapshot state.");
     } catch (err: any) {
       setToastTone("critical");
       setToastMessage(`Rollback failed: ${err.message}`);
@@ -1543,7 +1543,7 @@ export default function AppDashboard() {
           </Card>
         ) : (
           <Card background="bg-surface-secondary">
-            <InlineStack align="space-between" blockAlign="center">
+            <InlineStack align="space-between" blockAlign="center" gap="400">
               <InlineStack gap="300" blockAlign="center">
                 <div
                   style={{
@@ -1567,11 +1567,11 @@ export default function AppDashboard() {
                     </Badge>
                   </InlineStack>
                   <Text as="p" variant="bodySm" tone="subdued">
-                    All catalog SKUs are GEO-synchronized with Google AI &amp; ChatGPT Search. No scripts added to your storefront.
+                    All catalog SKUs are GEO-synchronized with Google AI &amp; ChatGPT Search. No storefront scripts.
                   </Text>
                 </BlockStack>
               </InlineStack>
-              <InlineStack gap="200" blockAlign="center">
+              <InlineStack gap="300" blockAlign="center">
                 <Button
                   icon={ChartLineIcon}
                   variant="secondary"
@@ -1890,7 +1890,7 @@ export default function AppDashboard() {
                       filteredProducts.length
                     )} of ${filteredProducts.length} products (Page ${currentPage} of ${totalPages})`}
                   </Text>
-                  <InlineStack gap="100" blockAlign="center">
+                  <InlineStack gap="200" blockAlign="center">
                     <Button
                       size="slim"
                       disabled={currentPage === 1}

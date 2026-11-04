@@ -97,7 +97,7 @@ export function SetupGuide({
               </BlockStack>
             </Box>
 
-            <InlineStack gap="100" blockAlign="center">
+            <InlineStack gap="200" blockAlign="center">
               {onReplayOnboarding && (
                 <Button
                   variant="plain"
