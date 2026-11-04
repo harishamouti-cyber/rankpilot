@@ -45,14 +45,12 @@ import { getShopifyProducts, ShopifyProductItem } from "~/services/shopify.serve
 import { auditCatalogForDrift, DriftAuditResult } from "~/services/drift_sentinel.server";
 import { OptimizationResult } from "~/services/gemini.server";
 import { CompetitorExtractedData } from "~/services/competitor.server";
-import { getStrikingDistanceQueries, StrikingQuery } from "~/services/gsc.server";
 import { OptimizationModal } from "~/components/OptimizationModal";
 import { CompetitorModal } from "~/components/CompetitorModal";
 import { RevisionHistoryModal, RevisionItem } from "~/components/RevisionHistoryModal";
 import { SettingsModal } from "~/components/SettingsModal";
 import { WelcomeModal } from "~/components/WelcomeModal";
 import { SetupGuide } from "~/components/SetupGuide";
-import { StrikingQueriesModal } from "~/components/StrikingQueriesModal";
 import { PerformanceDigestModal } from "~/components/PerformanceDigestModal";
 import { authenticate, unauthenticated } from "~/shopify.server";
 import { db } from "~/db.server";
@@ -93,7 +91,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   let storedRevisionsCount = 0;
   let recentIndexNowLogs: any[] = [];
   let setting: any = null;
-  let strikingQueries: any[] = [];
   let digest: any = null;
   let driftAudit: any = null;
 
@@ -113,7 +110,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       take: 8,
     });
     setting = await db.appSetting.findUnique({ where: { shop } });
-    strikingQueries = await getStrikingDistanceQueries(shop);
 
     digest = {
       weekStartDate: sevenDaysAgo.toISOString(),
@@ -135,7 +131,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     shop,
     products,
     recentIndexNowLogs,
-    strikingQueries,
     digest,
     driftAudit,
     metrics: {
@@ -144,7 +139,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       aiReadyPercentage,
       indexPingsCount,
       storedRevisionsCount,
-      strikingQueriesCount: strikingQueries.length,
     },
     setting: {
       plan: setting?.plan || "PRO",
@@ -279,7 +273,6 @@ export default function AppDashboard() {
     shop,
     products: initialProducts,
     recentIndexNowLogs,
-    strikingQueries: initialStrikingQueries,
     digest,
     metrics: initialMetrics,
     setting,
@@ -431,9 +424,7 @@ export default function AppDashboard() {
   const [activeActionMenuId, setActiveActionMenuId] = useState<string | null>(null);
   const [isIndexNowModalOpen, setIsIndexNowModalOpen] = useState(false);
 
-  // GSC Striking Queries & Performance Digest Modals state
-  const [strikingQueries, setStrikingQueries] = useState<StrikingQuery[]>(initialStrikingQueries || []);
-  const [isStrikingModalOpen, setIsStrikingModalOpen] = useState(false);
+  // Performance Digest Modal state
   const [isDigestModalOpen, setIsDigestModalOpen] = useState(false);
 
   // Toast / notification banner
@@ -523,30 +514,7 @@ export default function AppDashboard() {
     }
   }, [initialProducts]);
 
-  const handleQueryBoosted = (productId: string, query: string, newTitle: string) => {
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id === productId) {
-          saveStoredOptimization(shop, productId, {
-            seoTitle: newTitle,
-            seoDescription: p.seo?.description || "",
-            aiScore: 98,
-          });
-          return {
-            ...p,
-            title: newTitle,
-            seo: { title: newTitle, description: p.seo?.description || "" },
-            optimizationStatus: "AI_READY",
-            aiScore: 98,
-            geoScore: 98,
-          };
-        }
-        return p;
-      })
-    );
-    setToastMessage(`Page 1 Boost Applied: "${query}" injected into SEO title.`);
-    setToastTone("success");
-  };
+
 
   // Check onboarding and setup guide dismissal on mount
   React.useEffect(() => {
@@ -1499,16 +1467,6 @@ export default function AppDashboard() {
 
                 <div style={{ marginTop: 16 }}>
                   <InlineStack gap="300" blockAlign="center">
-                    {strikingQueries.length > 0 && (
-                      <Button
-                        icon={TargetIcon}
-                        variant="secondary"
-                        size="slim"
-                        onClick={() => setIsStrikingModalOpen(true)}
-                      >
-                        {`Striking Queries (${strikingQueries.length})`}
-                      </Button>
-                    )}
                     <Button
                       icon={WandMinimalIcon}
                       variant="primary"
@@ -2061,17 +2019,6 @@ export default function AppDashboard() {
         totalProductsCount={metrics.totalProducts}
         unoptimizedProductsCount={unoptimizedProducts.length}
         firstUnoptimizedProductTitle={unoptimizedProducts[0]?.title}
-      />
-
-      {/* ========================================================================= */}
-      {/* MODAL 7: GOOGLE SEARCH CONSOLE STRIKING DISTANCE RADAR                     */}
-      {/* ========================================================================= */}
-      <StrikingQueriesModal
-        open={isStrikingModalOpen}
-        onClose={() => setIsStrikingModalOpen(false)}
-        queries={strikingQueries}
-        shop={shop}
-        onQueryBoosted={handleQueryBoosted}
       />
 
       {/* ========================================================================= */}
