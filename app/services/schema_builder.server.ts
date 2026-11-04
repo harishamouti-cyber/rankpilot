@@ -39,7 +39,7 @@ export function buildMultiMarketProductSchema({
   storeDomain = "demo.myshopify.com",
   markets = SUPPORTED_MARKETS,
 }: MultiMarketSchemaOptions): Record<string, any> {
-  const basePrice = parseFloat(product.price || "49.99") || 49.99;
+  const basePrice = parseFloat(product.price || "0") || 0;
   const handle = product.handle || "product";
   const baseUrl = `https://${storeDomain}/products/${handle}`;
 
@@ -54,35 +54,10 @@ export function buildMultiMarketProductSchema({
       "url": marketUrl,
       "priceCurrency": m.currency,
       "price": localPrice,
-      "itemAvailability": "https://schema.org/InStock",
-      "priceValidUntil": "2027-12-31",
       "eligibleRegion": {
         "@type": "Country",
         "name": m.countryCode,
-      },
-      "shippingDetails": {
-        "@type": "OfferShippingDetails",
-        "shippingRate": {
-          "@type": "MonetaryAmount",
-          "value": "0.00",
-          "currency": m.currency,
-        },
-        "deliveryTime": {
-          "@type": "ShippingDeliveryTime",
-          "handlingTime": {
-            "@type": "QuantitativeValue",
-            "minValue": 0,
-            "maxValue": 1,
-            "unitCode": "d",
-          },
-          "transitTime": {
-            "@type": "QuantitativeValue",
-            "minValue": 2,
-            "maxValue": 5,
-            "unitCode": "d",
-          },
-        },
-      },
+      }
     };
   });
 
@@ -100,28 +75,11 @@ export function buildMultiMarketProductSchema({
     "description": optimization.seoDescription,
     "brand": {
       "@type": "Brand",
-      "name": product.vendor || "RankPilot Partner Brand",
+      "name": product.vendor || "",
     },
     "inLanguage": "en-US",
     "url": baseUrl,
     "offers": offers,
     "alternateUrls": hreflangAlternates,
-    "additionalProperty": [
-      {
-        "@type": "PropertyValue",
-        "name": "GEO Readiness Score",
-        "value": optimization.aiScore.toString(),
-      },
-      {
-        "@type": "PropertyValue",
-        "name": "AEO Optimization Engine",
-        "value": "RankPilot 0ms Metafield Engine",
-      },
-    ],
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.9",
-      "reviewCount": "128",
-    },
   };
 }

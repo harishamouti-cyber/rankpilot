@@ -1,0 +1,18 @@
+{% comment %}
+  RankPilot app embed: outputs the product JSON-LD that RankPilot saved
+  in the product's rankpilot.schema_json metafield. No JavaScript.
+{% endcomment %}
+{% if request.page_type == 'product' and product %}
+  {% assign rp_schema = product.metafields.rankpilot.schema_json %}
+  {% if rp_schema != blank %}
+    <script type="application/ld+json" data-rankpilot="schema">{{ rp_schema.value | json }}</script>
+  {% endif %}
+{% endif %}
+
+{% schema %}
+{
+  "name": "RankPilot structured data",
+  "target": "head",
+  "settings": []
+}
+{% endschema %}

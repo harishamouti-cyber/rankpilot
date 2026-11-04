@@ -31,7 +31,6 @@ import {
   UndoIcon,
   SearchIcon,
   SettingsIcon,
-  ExportIcon,
   CreditCardIcon,
   ChartLineIcon,
   PlayIcon,
@@ -1132,7 +1131,7 @@ export default function AppDashboard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Re-index ping failed");
       setToastTone("success");
-      setToastMessage(`Instant IndexNow ping dispatched for "${product.title}" (Bing, Yandex, Perplexity).`);
+      setToastMessage(`IndexNow ping sent for "${product.title}"`);
       setMetrics((prev) => ({ ...prev, indexPingsCount: prev.indexPingsCount + 1 }));
     } catch (err: any) {
       setToastTone("critical");
@@ -1419,11 +1418,6 @@ export default function AppDashboard() {
               onAction: () => navigate(`/app/citations?shop=${encodeURIComponent(shop)}`),
             },
             {
-              content: "Export llms.txt",
-              icon: ExportIcon,
-              onAction: () => window.open(`/llms.txt?shop=${encodeURIComponent(shop)}`, "_blank"),
-            },
-            {
               content: "Subscription & Billing",
               icon: CreditCardIcon,
               onAction: () => navigate(`/app/billing?shop=${encodeURIComponent(shop)}`),
@@ -1678,7 +1672,7 @@ export default function AppDashboard() {
                       {metrics.indexPingsCount}
                     </Text>
                     <Text as="p" variant="bodySm" tone="subdued">
-                      Bing &amp; Perplexity ↗
+                      Bing &amp; Yandex ↗
                     </Text>
                   </BlockStack>
                 </div>
@@ -2027,7 +2021,7 @@ export default function AppDashboard() {
           <BlockStack gap="400">
             <Banner tone="info">
               <Text as="p" variant="bodySm">
-                Real-time IndexNow pings dispatched to Microsoft Bing, Yandex, and Perplexity Search crawlers. Search engines index newly published metadata and schema within seconds.
+                IndexNow pings notify Bing, Yandex and other IndexNow engines when product pages change. Each engine decides when to recrawl.
               </Text>
             </Banner>
             <div style={{ maxHeight: 380, overflowY: "auto" }}>

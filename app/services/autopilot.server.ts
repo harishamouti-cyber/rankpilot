@@ -1,6 +1,6 @@
 import { db } from "~/db.server";
 import { getShopifyProducts, applyOptimizationToProduct } from "./shopify.server";
-import { optimizeProductWithAI } from "./gemini.server";
+import { optimizeProductWithAI, productInputFromItem } from "./gemini.server";
 import { pingIndexNow } from "./indexnow.server";
 
 export interface AutopilotScanResult {
@@ -25,7 +25,7 @@ export async function runAutopilotScan(
 ): Promise<AutopilotScanResult> {
   const products = await getShopifyProducts(shop, adminClient);
   const setting = await db.appSetting.findUnique({ where: { shop } });
-  const domain = setting?.storeDomain || "demo.myshopify.com";
+  const domain = setting?.storeDomain || shop;
 
   let inventoryTransitions = 0;
   let autoOptimizedCount = 0;
@@ -75,19 +75,7 @@ export async function runAutopilotScan(
     // 2. Auto-optimize if product is not optimized yet
     if (product.optimizationStatus !== "OPTIMIZED") {
       try {
-        const optimization = await optimizeProductWithAI(
-          {
-            title: product.title,
-            descriptionHtml: product.descriptionHtml,
-            vendor: product.vendor,
-            productType: product.productType,
-            tags: product.tags,
-            price: product.priceRange.minVariantPrice.amount,
-            currency: product.priceRange.minVariantPrice.currencyCode,
-            handle: product.handle,
-          },
-          shop
-        );
+        const optimization = await optimizeProductWithAI(productInputFromItem(product, domain), shop);
 
         await applyOptimizationToProduct({
           productId: product.id,

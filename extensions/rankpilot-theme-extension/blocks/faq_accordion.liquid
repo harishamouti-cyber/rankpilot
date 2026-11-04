@@ -109,9 +109,7 @@
 <div class="rankpilot-storefront-wrapper">
   {% comment %} 1. Inject Schema.org JSON-LD for AI Search Engines {% endcomment %}
   {% if block.settings.inject_schema and schema_data != blank %}
-    <script type="application/ld+json">
-      {{ schema_data }}
-    </script>
+    <script type="application/ld+json">{{ product.metafields.rankpilot.schema_json.value | json }}</script>
   {% endif %}
 
   {% comment %} 2. High-Density Specification Matrix {% endcomment %}
@@ -158,8 +156,8 @@
       "type": "checkbox",
       "id": "inject_schema",
       "label": "Inject Schema.org JSON-LD",
-      "default": true,
-      "info": "Embeds rich structured data for Google AI Overviews and ChatGPT Search"
+      "default": false,
+      "info": "Leave off if the RankPilot structured data app embed is enabled, to avoid duplicate JSON-LD"
     },
     {
       "type": "header",

@@ -81,10 +81,10 @@ export async function pingIndexNow({
   } catch (error: any) {
     console.warn("IndexNow ping encountered network/timeout exception:", error);
     // In demo / test environments, treat simulated ping gracefully
-    statusCode = 202;
-    statusText = "Accepted for Indexing (Queued)";
-    responseBody = "IndexNow API accepted submission queue.";
-    isSuccess = true;
+    statusCode = 0;
+    statusText = "Network error";
+    responseBody = `IndexNow request failed: ${error?.message || "network error"}`;
+    isSuccess = false;
   }
 
   // Record in SQLite IndexNowLog
@@ -109,7 +109,7 @@ export async function pingIndexNow({
     success: isSuccess,
     statusCode,
     message: isSuccess
-      ? `Successfully submitted ${urls.length} URL(s) to IndexNow engines (Bing, Copilot, Perplexity, Yandex).`
+      ? `Submitted ${urls.length} URL(s) to IndexNow (HTTP ${statusCode}). Engines confirm ownership by checking the key file on your domain before crawling.`
       : `IndexNow responded with status ${statusCode}: ${responseBody || statusText}`,
     urlsPinged: urls,
     timestamp: new Date().toISOString(),

@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { getShopifyProducts, ShopifyProductItem } from "~/services/shopify.server";
-import { optimizeProductWithAI } from "~/services/gemini.server";
+import { optimizeProductWithAI, productInputFromItem, computeBaselineScore } from "~/services/gemini.server";
 import { extractCompetitorData } from "~/services/competitor.server";
 import { authenticate, unauthenticated } from "~/shopify.server";
 import { db } from "~/db.server";
@@ -57,25 +57,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }
     }
 
-    const imageUrl = product.featuredImage?.url;
-    const currentAltText = product.imageAltText || product.featuredImage?.altText || "";
-
     const setting = await db.appSetting.findUnique({ where: { shop: effectiveShop } });
     const storeDomain = setting?.storeDomain || effectiveShop || "demo.myshopify.com";
 
     const optimization = await optimizeProductWithAI(
-      {
-        title: product.title,
-        descriptionHtml: product.descriptionHtml || "",
-        vendor: product.vendor || "",
-        productType: product.productType || "",
-        tags: product.tags || [],
-        price: product.priceRange?.minVariantPrice?.amount || "0.00",
-        currency: product.priceRange?.minVariantPrice?.currencyCode || "USD",
-        handle: product.handle,
-        imageUrl,
-        currentAltText,
-        shopDomain: storeDomain,
+      productInputFromItem(product, storeDomain, {
         competitorData: competitorData
           ? {
               url: competitorData.url,
@@ -84,9 +70,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               specifications: competitorData.specifications,
             }
           : undefined,
-      },
+      }),
       effectiveShop
     );
+    optimization.baselineScore = computeBaselineScore(product);
 
     return json({
       success: true,

@@ -71,8 +71,13 @@ export function OptimizationModal({
   if (!product || !optimization) return null;
 
   const isOptimized = product.optimizationStatus === "OPTIMIZED" || product.optimizationStatus === "AI_READY";
-  const baselineScore = isOptimized ? (product.geoScore || product.aiScore || 96) : 38;
-  const projectedScore = optimization.aiScore || 96;
+  const baselineScore =
+    typeof optimization.baselineScore === "number"
+      ? optimization.baselineScore
+      : product.geoScore ?? product.aiScore ?? 0;
+  const projectedScore = typeof optimization.aiScore === "number" ? optimization.aiScore : 0;
+  const scoreGain = projectedScore - baselineScore;
+  const alreadyOptimized = scoreGain <= 0;
 
   const beforeTitle = product.seo?.title || product.title;
 
@@ -136,27 +141,35 @@ export function OptimizationModal({
               <InlineStack align="space-between" blockAlign="center">
                 <InlineStack gap="200" blockAlign="center">
                   <Text as="h2" variant="headingMd" fontWeight="bold">
-                    Projected GEO Score Lift:
+                    {alreadyOptimized ? "GEO Score:" : "Projected GEO Score Lift:"}
                   </Text>
-                  <Badge tone={baselineScore < 50 ? "critical" : "warning"} size="medium">
-                    {`Baseline: ${baselineScore}/100`}
-                  </Badge>
-                  <Text as="span" variant="headingMd" fontWeight="bold">
-                    ➔
-                  </Text>
-                  <Badge tone="success" size="medium">
-                    {`Supercharged: ${projectedScore}/100 (+${Math.max(projectedScore - baselineScore, 0)} pts)`}
-                  </Badge>
+                  {alreadyOptimized ? (
+                    <>
+                      <Badge tone="success" size="medium">{`${baselineScore}/100`}</Badge>
+                      <Badge tone="info">Already optimized</Badge>
+                    </>
+                  ) : (
+                    <>
+                      <Badge tone={baselineScore < 50 ? "critical" : "warning"} size="medium">
+                        {`Current: ${baselineScore}/100`}
+                      </Badge>
+                      <Text as="span" variant="headingMd" fontWeight="bold">
+                        ➔
+                      </Text>
+                      <Badge tone="success" size="medium">
+                        {`After apply: ${projectedScore}/100 (+${scoreGain} pts)`}
+                      </Badge>
+                    </>
+                  )}
                 </InlineStack>
                 <InlineStack gap="150">
-                  <Badge tone="info">No storefront scripts</Badge>
-                  <Badge tone="success">Ready for ChatGPT &amp; Google AI</Badge>
+                  <Badge tone="info">Built from your product data</Badge>
                 </InlineStack>
               </InlineStack>
 
               <ProgressBar
-                progress={projectedScore}
-                tone={projectedScore >= 90 ? "success" : "highlight"}
+                progress={Math.max(projectedScore, baselineScore)}
+                tone={Math.max(projectedScore, baselineScore) >= 80 ? "success" : "highlight"}
                 size="small"
               />
 
@@ -211,7 +224,7 @@ export function OptimizationModal({
           {/* ========================================================================= */}
           {selectedView === 0 && (
             <BlockStack gap="400">
-              <InlineStack gap="400" align="space-between">
+              <InlineStack gap="400" align="space-between" blockAlign="start">
                 {/* Left Column: Current Storefront (Audit Findings) */}
                 <Box
                   width="48%"
@@ -226,10 +239,8 @@ export function OptimizationModal({
                       <Text as="h3" variant="headingSm" tone="subdued" fontWeight="bold">
                         CURRENT STOREFRONT (AUDIT)
                       </Text>
-                      <Badge tone="critical">
-                        {baselineScore < 50
-                          ? "38/100 (Unranked & Invisible to AI)"
-                          : `${baselineScore}/100 (Baseline)`}
+                      <Badge tone={baselineScore < 50 ? "critical" : baselineScore < 80 ? "warning" : "success"}>
+                        {`${baselineScore}/100 (current)`}
                       </Badge>
                     </InlineStack>
 
@@ -951,13 +962,13 @@ export function OptimizationModal({
 
                     <ul style={{ paddingLeft: 22, margin: "4px 0", fontSize: 13, color: "#202223" }}>
                       <li style={{ marginBottom: 6 }}>
-                        <strong>Technical Architecture:</strong> Engineered with structured specifications and drop-tested durability.
+                        <strong>Specifications:</strong> Structured specification table built from your product data.
                       </li>
                       <li style={{ marginBottom: 6 }}>
-                        <strong>Verified Pricing &amp; Offers:</strong> Direct value at ${product.priceRange.minVariantPrice.amount} with full manufacturer warranty.
+                        <strong>Pricing:</strong> {product.priceRange.minVariantPrice.amount} {product.priceRange.minVariantPrice.currencyCode} from your store.
                       </li>
                       <li>
-                        <strong>Buyer Trust Factor:</strong> 30-day money-back guarantee with fast tracked delivery.
+                        <strong>Buyer FAQs:</strong> {optimization.faqList.length} answers drawn from your catalog data.
                       </li>
                     </ul>
 
@@ -1038,9 +1049,9 @@ export function OptimizationModal({
                     </Text>
 
                     <div style={{ backgroundColor: "#f8f9fa", padding: "12px", borderRadius: 8, fontSize: 13, lineHeight: 1.5 }}>
-                      • <strong>Official Pricing:</strong> Retails at ${product.priceRange.minVariantPrice.amount} {product.priceRange.minVariantPrice.currencyCode} directly through authorized merchant storefront [1].<br />
+                      • <strong>Pricing:</strong> {product.priceRange.minVariantPrice.amount} {product.priceRange.minVariantPrice.currencyCode} on your storefront [1].<br />
                       • <strong>Specifications:</strong> Structured specification table from your product data [2].<br />
-                      • <strong>Buyer Satisfaction:</strong> Supported by dedicated buyer FAQ resolving sizing and warranty concerns [1, 3].
+                      • <strong>Buyer FAQs:</strong> Answers drawn from your product data [1, 3].
                     </div>
                   </BlockStack>
                 </Box>
@@ -1059,15 +1070,28 @@ export function OptimizationModal({
           )}
 
           {applySuccess && (
-            <Box paddingBlockEnd="300">
+            <Box paddingBlockStart="200" paddingBlockEnd="400">
               <Banner tone="success" title="Successfully Updated & Pushed to Shopify!">
                 <BlockStack gap="100">
                   <p>
                     ✓ <strong>{product.title}</strong> is now updated live in your Shopify catalog.
                   </p>
                   <p style={{ color: "#374151", fontSize: "13px" }}>
-                    The product catalog now includes the introductory overview, structured specifications table, buyer FAQs, and image alt text for Google Images &amp; AI visual search.
+                    Your product description now includes the specifications table and buyer FAQs, and the SEO title, meta description and image alt text are saved in Shopify.
                   </p>
+                  {shop && (
+                    <p style={{ color: "#374151", fontSize: "13px" }}>
+                      To show the JSON-LD structured data on your storefront, turn on the{" "}
+                      <a
+                        href={`https://${shop}/admin/themes/current/editor?context=apps&activateAppId=82464865c45f23d73b21b486de6ace7a/schema_embed`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        RankPilot structured data app embed
+                      </a>{" "}
+                      in your theme (one time).
+                    </p>
+                  )}
                 </BlockStack>
               </Banner>
             </Box>

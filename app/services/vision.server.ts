@@ -206,38 +206,19 @@ export function generateSmartFallbackAltText(
   vendor?: string,
   currentAltText?: string
 ): string {
-  const brand = vendor ? `${vendor.trim()} ` : "";
   const cleanTitle = productTitle
     .replace(/\b(raw|unoptimized|sample|test|placeholder|demo)\b/gi, "")
     .replace(/\s+/g, " ")
     .trim() || productTitle.trim();
 
   // If product already has detailed alt text, preserve and smartly trim it without mid-word cuts
-  if (currentAltText && currentAltText.length >= 10 && !/raw|unoptimized|placeholder/i.test(currentAltText)) {
+  if (currentAltText && currentAltText.length >= 10 && !/raw|unoptimized|placeholder|shows text:|generated data|authentic catalog view|verified materials/i.test(currentAltText)) {
     const trimmed = smartTrimAltText(currentAltText, 124);
     if (trimmed.length >= 15) return trimmed;
   }
 
-  if (/\bsnowboard\b/i.test(cleanTitle)) {
-    return `${brand}${cleanTitle} top and bottom graphic view with reinforced edges`.slice(0, 124);
-  }
-  if (/\bbackpack\b/i.test(cleanTitle)) {
-    return `${brand}${cleanTitle} in weather-resistant exterior with ergonomic straps`.slice(0, 124);
-  }
-  if (/\b(bottle|tumbler)\b/i.test(cleanTitle)) {
-    return `${brand}${cleanTitle} vacuum insulated tumbler with leakproof lid`.slice(0, 124);
-  }
-  if (/\bwatch\b/i.test(cleanTitle)) {
-    return `${brand}${cleanTitle} precision engineered watch with scratch-resistant finish`.slice(0, 124);
-  }
-  if (/\b(shoe|shoes|sneaker|sneakers|boot|boots)\b/i.test(cleanTitle)) {
-    return `${brand}${cleanTitle} premium footwear profile with durable traction sole`.slice(0, 124);
-  }
-  if (/\b(shirt|hoodie|jacket|apparel)\b/i.test(cleanTitle)) {
-    return `${brand}${cleanTitle} premium fabric construction in retail presentation`.slice(0, 124);
-  }
-
-  return `${brand}${cleanTitle} authentic catalog view with verified materials`.slice(0, 124);
+  // Facts only: brand + real product title. No invented materials or features.
+  return smartTrimAltText(`${cleanTitle}${vendor && !cleanTitle.toLowerCase().includes(vendor.trim().toLowerCase()) ? ` by ${vendor.trim()}` : ""}`, 124);
 }
 
 /**

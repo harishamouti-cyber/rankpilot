@@ -99,19 +99,52 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   // Zero-Click Autopilot is active: Generate full GEO optimization
-  const price = payload.variants?.[0]?.price || "49.99";
-  const currency = payload.variants?.[0]?.currency || "USD";
+  const payloadVariants: any[] = Array.isArray(payload.variants) ? payload.variants : [];
+  const variantPrices = payloadVariants.map((v) => parseFloat(v.price)).filter((n) => isFinite(n) && n > 0);
+  const price = variantPrices.length ? Math.min(...variantPrices).toFixed(2) : "";
+  const maxPrice = variantPrices.length ? Math.max(...variantPrices).toFixed(2) : undefined;
+  const settingForCurrency = await db.appSetting.findUnique({ where: { shop } });
+  let currency: string = payload.variants?.[0]?.currency || "";
+  if (!currency && admin) {
+    try {
+      const res = await admin.graphql(`#graphql
+        { shop { currencyCode } }`);
+      currency = (await res.json())?.data?.shop?.currencyCode || "";
+    } catch {
+      // leave empty: schema omits offers when currency is unknown
+    }
+  }
+  const tracked = payloadVariants.some((v) => v.inventory_management);
+  const totalInventory = tracked
+    ? payloadVariants.reduce((sum, v) => sum + (Number(v.inventory_quantity) || 0), 0)
+    : undefined;
+  const realOptions = Array.isArray(payload.options)
+    ? payload.options.map((o: any) => ({ name: String(o.name || ""), values: (o.values || []).map(String) }))
+    : [];
+  const realVariants = payloadVariants.map((v) => ({
+    title: v.title,
+    sku: v.sku || null,
+    price: v.price,
+    ...(tracked ? {} : { availableForSale: true }),
+  }));
 
   const optimization = await optimizeProductWithAI(
     {
       title,
       descriptionHtml: payload.body_html || "",
-      vendor: payload.vendor || "Brand",
-      productType: payload.product_type || "General",
-      tags: typeof payload.tags === "string" ? payload.tags.split(",").map((t: string) => t.trim()) : [],
+      vendor: payload.vendor || "",
+      productType: payload.product_type || "",
+      tags: typeof payload.tags === "string" ? payload.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [],
       price,
+      maxPrice,
       currency,
       handle,
+      options: realOptions,
+      variants: realVariants,
+      totalInventory,
+      imageUrl: payload.image?.src || payload.images?.[0]?.src,
+      currentAltText: payload.image?.alt || payload.images?.[0]?.alt || "",
+      shopDomain: settingForCurrency?.storeDomain || shop,
     },
     shop
   );
@@ -121,10 +154,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     title,
     handle,
     descriptionHtml: payload.body_html || "",
-    vendor: payload.vendor || "Brand",
-    productType: payload.product_type || "General",
-    tags: typeof payload.tags === "string" ? payload.tags.split(",").map((t: string) => t.trim()) : [],
-    totalInventory: 100,
+    vendor: payload.vendor || "",
+    productType: payload.product_type || "",
+    tags: typeof payload.tags === "string" ? payload.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [],
+    totalInventory: totalInventory ?? 0,
     priceRange: {
       minVariantPrice: { amount: price, currencyCode: currency },
     },

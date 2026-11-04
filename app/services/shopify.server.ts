@@ -25,6 +25,9 @@ export interface ShopifyProductItem {
       currencyCode: string;
     };
   };
+  maxPrice?: string;
+  options?: Array<{ name: string; values: string[] }>;
+  variants?: Array<{ title?: string; sku?: string | null; price?: string; availableForSale?: boolean }>;
   seo: {
     title?: string;
     description?: string;
@@ -253,6 +256,21 @@ query GetProducts($first: Int!, $after: String) {
         minVariantPrice {
           amount
           currencyCode
+        }
+        maxVariantPrice {
+          amount
+        }
+      }
+      options {
+        name
+        values
+      }
+      variants(first: 50) {
+        nodes {
+          title
+          sku
+          price
+          availableForSale
         }
       }
       seo {
@@ -599,6 +617,14 @@ export async function getShopifyProducts(
                 currencyCode: currency,
               },
             },
+            maxPrice: node.priceRangeV2?.maxVariantPrice?.amount || undefined,
+            options: (node.options || []).map((o: any) => ({ name: o.name, values: o.values || [] })),
+            variants: (node.variants?.nodes || []).map((v: any) => ({
+              title: v.title,
+              sku: v.sku,
+              price: v.price,
+              availableForSale: v.availableForSale,
+            })),
             seo: {
               title: node.seo?.title || "",
               description: node.seo?.description || "",
@@ -725,6 +751,14 @@ export async function getShopifyProducts(
  * Preserves the merchant's original text, styles cleanly for modern Shopify themes,
  * and encapsulates injected content within semantic HTML comments for reliable rollbacks and re-optimizations.
  */
+function escHtml(v: string): string {
+  return String(v ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 export function buildEnhancedProductDescription({
   originalDescriptionHtml = "",
   title,
@@ -745,7 +779,7 @@ export function buildEnhancedProductDescription({
 
   // If original description was empty or just empty tags, create a rich introductory paragraph
   if (!cleanBase || cleanBase === "<p></p>" || cleanBase === "<p><br></p>" || cleanBase === "<p>&nbsp;</p>") {
-    cleanBase = `<p>${optimization.summarySnippet || optimization.seoDescription || `${title} engineered for maximum performance, durability, and premium quality.`}</p>`;
+    cleanBase = `<p>${escHtml(optimization.summarySnippet || optimization.seoDescription || title)}</p>`;
   }
 
   // Build the Spec Matrix HTML block
@@ -753,7 +787,7 @@ export function buildEnhancedProductDescription({
   if (optimization.specMatrixHtml) {
     specHtml = `
 <div class="rankpilot-spec-section" style="margin-top: 24px; margin-bottom: 24px;">
-  <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 12px; color: #111827;">Product Specifications & Features</h3>
+  <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 12px; color: #111827;">Product Specifications</h3>
   ${optimization.specMatrixHtml}
 </div>`;
   }
@@ -765,9 +799,9 @@ export function buildEnhancedProductDescription({
       .map(
         (faq) => `
   <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" style="margin-bottom: 16px; padding: 12px 16px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
-    <h4 itemprop="name" style="margin: 0 0 6px 0; font-size: 15px; font-weight: 600; color: #1f2937;">Q: ${faq.question}</h4>
+    <h4 itemprop="name" style="margin: 0 0 6px 0; font-size: 15px; font-weight: 600; color: #1f2937;">Q: ${escHtml(faq.question)}</h4>
     <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-      <p itemprop="text" style="margin: 0; font-size: 14px; line-height: 1.6; color: #4b5563;">${faq.answer}</p>
+      <p itemprop="text" style="margin: 0; font-size: 14px; line-height: 1.6; color: #4b5563;">${escHtml(faq.answer)}</p>
     </div>
   </div>`
       )
