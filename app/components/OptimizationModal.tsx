@@ -10,7 +10,6 @@ import {
   Button,
   ButtonGroup,
   Divider,
-  ProgressBar,
   Banner,
   Icon,
   TextField,
@@ -134,422 +133,178 @@ export function OptimizationModal({
       size="large"
     >
       <Modal.Section>
-        <BlockStack gap="400">
-          {/* Header Score Lift & Transformation Summary */}
-          <Card background="bg-surface-secondary">
-            <BlockStack gap="300">
-              <InlineStack align="space-between" blockAlign="center">
-                <InlineStack gap="200" blockAlign="center">
-                  <Text as="h2" variant="headingMd" fontWeight="bold">
-                    {alreadyOptimized ? "GEO Score:" : "Projected GEO Score Lift:"}
+        <BlockStack gap="200">
+          {/* Compact score header: one row */}
+          <Box padding="200" background="bg-surface-secondary" borderRadius="200">
+            <InlineStack align="space-between" blockAlign="center" gap="200" wrap={false}>
+              <InlineStack gap="150" blockAlign="center" wrap={false}>
+                <Text as="span" variant="headingSm">GEO score</Text>
+                {alreadyOptimized ? (
+                  <>
+                    <Badge tone="success">{`${baselineScore}/100`}</Badge>
+                    <Badge tone="info">Already optimized</Badge>
+                  </>
+                ) : (
+                  <>
+                    <Badge tone={baselineScore < 50 ? "critical" : "warning"}>{`${baselineScore}`}</Badge>
+                    <Text as="span" variant="bodySm">→</Text>
+                    <Badge tone="success">{`${projectedScore}/100 (+${scoreGain})`}</Badge>
+                  </>
+                )}
+              </InlineStack>
+              <InlineStack gap="200" blockAlign="center" wrap={false}>
+                {[
+                  ["Title", optimization.scoreBreakdown.titleOptimization],
+                  ["Meta", optimization.scoreBreakdown.metaDescriptionQuality],
+                  ["Specs", optimization.scoreBreakdown.specMatrixCompleteness],
+                  ["Schema", optimization.scoreBreakdown.schemaRichness],
+                  ["FAQ", optimization.scoreBreakdown.conversationalFaqDepth],
+                ].map(([label, val]) => (
+                  <Text key={String(label)} as="span" variant="bodySm" tone="subdued">
+                    {label} <strong>{val}</strong>/20
                   </Text>
-                  {alreadyOptimized ? (
-                    <>
-                      <Badge tone="success" size="medium">{`${baselineScore}/100`}</Badge>
-                      <Badge tone="info">Already optimized</Badge>
-                    </>
-                  ) : (
-                    <>
-                      <Badge tone={baselineScore < 50 ? "critical" : "warning"} size="medium">
-                        {`Current: ${baselineScore}/100`}
-                      </Badge>
-                      <Text as="span" variant="headingMd" fontWeight="bold">
-                        ➔
-                      </Text>
-                      <Badge tone="success" size="medium">
-                        {`After apply: ${projectedScore}/100 (+${scoreGain} pts)`}
-                      </Badge>
-                    </>
-                  )}
-                </InlineStack>
-                <InlineStack gap="150">
-                  <Badge tone="info">Built from your product data</Badge>
-                </InlineStack>
+                ))}
               </InlineStack>
-
-              <ProgressBar
-                progress={Math.max(projectedScore, baselineScore)}
-                tone={Math.max(projectedScore, baselineScore) >= 80 ? "success" : "highlight"}
-                size="small"
-              />
-
-              <InlineStack gap="300" wrap>
-                <Text as="span" variant="bodySm" tone="subdued">
-                  Title CTR: <strong>{optimization.scoreBreakdown.titleOptimization}/20</strong>
-                </Text>
-                <Text as="span" variant="bodySm" tone="subdued">
-                  Meta Quality: <strong>{optimization.scoreBreakdown.metaDescriptionQuality}/20</strong>
-                </Text>
-                <Text as="span" variant="bodySm" tone="subdued">
-                  Spec Matrix: <strong>{optimization.scoreBreakdown.specMatrixCompleteness}/20</strong>
-                </Text>
-                <Text as="span" variant="bodySm" tone="subdued">
-                  JSON-LD Schema: <strong>{optimization.scoreBreakdown.schemaRichness}/20</strong>
-                </Text>
-                <Text as="span" variant="bodySm" tone="subdued">
-                  Buyer FAQ Depth: <strong>{optimization.scoreBreakdown.conversationalFaqDepth}/20</strong>
-                </Text>
-              </InlineStack>
-            </BlockStack>
-          </Card>
-
-          {/* Clean Segmented Control with 16px vertical padding */}
-          <Box paddingBlock="400">
-            <InlineStack align="center">
-              <ButtonGroup variant="segmented">
-                <Button
-                  pressed={selectedView === 0}
-                  onClick={() => setSelectedView(0)}
-                >
-                  Side-by-Side Comparison
-                </Button>
-                <Button
-                  pressed={selectedView === 1}
-                  onClick={() => setSelectedView(1)}
-                >
-                  JSON-LD &amp; Structured Schema
-                </Button>
-                <Button
-                  pressed={selectedView === 2}
-                  onClick={() => setSelectedView(2)}
-                >
-                  Live AI Engine Simulation
-                </Button>
-              </ButtonGroup>
             </InlineStack>
           </Box>
+
+          <InlineStack align="center">
+            <ButtonGroup variant="segmented">
+              <Button size="slim" pressed={selectedView === 0} onClick={() => setSelectedView(0)}>
+                Side-by-Side Comparison
+              </Button>
+              <Button size="slim" pressed={selectedView === 1} onClick={() => setSelectedView(1)}>
+                JSON-LD &amp; Structured Schema
+              </Button>
+              <Button size="slim" pressed={selectedView === 2} onClick={() => setSelectedView(2)}>
+                Live AI Engine Simulation
+              </Button>
+            </ButtonGroup>
+          </InlineStack>
 
           {/* ========================================================================= */}
           {/* VIEW 1: SIDE-BY-SIDE COMPARISON                                           */}
           {/* ========================================================================= */}
           {selectedView === 0 && (
-            <BlockStack gap="400">
-              <InlineStack gap="400" align="space-between" blockAlign="start">
-                {/* Left Column: Current Storefront (Audit Findings) */}
-                <Box
-                  width="48%"
-                  padding="400"
-                  background="bg-surface-secondary"
-                  borderRadius="200"
-                  borderWidth="025"
-                  borderColor="border"
-                >
-                  <BlockStack gap="300">
-                    <InlineStack align="space-between" blockAlign="center">
-                      <Text as="h3" variant="headingSm" tone="subdued" fontWeight="bold">
-                        CURRENT STOREFRONT (AUDIT)
-                      </Text>
-                      <Badge tone={baselineScore < 50 ? "critical" : baselineScore < 80 ? "warning" : "success"}>
-                        {`${baselineScore}/100 (current)`}
-                      </Badge>
-                    </InlineStack>
+            <BlockStack gap="200">
+              {/* Audit findings as one-line chips (computed from live data) */}
+              {(() => {
+                const findings: string[] = [];
+                if (!product.seo?.title) findings.push("SEO title");
+                if (!product.seo?.description) findings.push("Meta description");
+                if (!beforeAltText) findings.push("Image alt text");
+                if (!product.rankpilotMetafields?.schemaJson) findings.push("JSON-LD schema");
+                if (!product.rankpilotMetafields?.specMatrix) findings.push("Spec table");
+                if (!product.rankpilotMetafields?.faqJson) findings.push("Buyer FAQs");
+                return (
+                  <InlineStack gap="100" blockAlign="center" wrap>
+                    <Text as="span" variant="bodySm" tone="subdued">Current store:</Text>
+                    {findings.length === 0 ? (
+                      <Badge tone="success">Nothing missing</Badge>
+                    ) : (
+                      findings.map((f) => (
+                        <Badge key={f} tone="critical">{`Missing: ${f}`}</Badge>
+                      ))
+                    )}
+                  </InlineStack>
+                );
+              })()}
 
-                    <Divider />
-
-                    <BlockStack gap="100">
-                      <Text as="p" variant="bodySm" fontWeight="semibold" tone="subdued">
-                        Raw Product Title ({beforeTitle.length} chars)
-                      </Text>
-                      <Text as="p" variant="bodyMd">
-                        {beforeTitle}
-                      </Text>
-                    </BlockStack>
-
-                    <BlockStack gap="100">
-                      <Text as="p" variant="bodySm" fontWeight="semibold" tone="subdued">
-                        Storefront Description
-                      </Text>
-                      <Box padding="200" background="bg-surface" borderRadius="100">
-                        <Text as="p" variant="bodySm" tone="subdued">
-                          {beforeDesc}
-                        </Text>
-                      </Box>
-                    </BlockStack>
-
-                    {/* Featured Image & Current Alt Text */}
-                    <BlockStack gap="100">
-                      <InlineStack align="space-between" blockAlign="center">
-                        <Text as="p" variant="bodySm" fontWeight="semibold" tone="subdued">
-                          Featured Image Alt Text
-                        </Text>
-                        <Badge tone={beforeAltText ? "info" : "critical"} size="small">
-                          {beforeAltText ? `${beforeAltText.length}/125 chars` : "0/125 chars (Missing)"}
-                        </Badge>
-                      </InlineStack>
-                      <Box
-                        padding="200"
-                        background="bg-surface"
-                        borderRadius="150"
-                        borderWidth="025"
-                        borderColor={beforeAltText ? "border" : "border-critical"}
-                      >
-                        <InlineStack gap="200" blockAlign="center">
-                          {product.featuredImage?.url ? (
-                            <img
-                              src={product.featuredImage.url}
-                              alt={beforeAltText || product.title}
-                              style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 4, border: "1px solid #e1e3e5", flexShrink: 0 }}
-                            />
-                          ) : (
-                            <div style={{ width: 44, height: 44, background: "#f1f2f4", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
-                              <Icon source={ImageIcon} tone="subdued" />
-                            </div>
-                          )}
-                          <BlockStack gap="050">
-                            <Text as="p" variant="bodySm" tone={beforeAltText ? "subdued" : "critical"}>
-                              {beforeAltText || "Missing (0 chars) — Invisible to Google Images & AI visual engines"}
-                            </Text>
-                          </BlockStack>
-                        </InlineStack>
-                      </Box>
-                    </BlockStack>
-
-                    {/* Dedicated Audit Findings Badges */}
-                    <BlockStack gap="200">
-                      <Text as="p" variant="bodySm" fontWeight="bold">
-                        Audit Findings &amp; Search Gaps:
-                      </Text>
-
-                      {!beforeAltText && (
-                        <Box
-                          padding="200"
-                          background="bg-surface"
-                          borderRadius="150"
-                          borderWidth="025"
-                          borderColor="border-critical"
-                        >
-                          <InlineStack gap="200" blockAlign="center">
-                            <Badge tone="critical" size="small">
-                              [✕] Missing
-                            </Badge>
-                            <BlockStack gap="050">
-                              <Text as="p" variant="bodySm" fontWeight="semibold">
-                                Missing Image Alt Text &amp; Visual Grounding
-                              </Text>
-                              <Text as="p" variant="bodyXs" tone="subdued">
-                                Google Images and multimodal AI search cannot index product aesthetics or build.
-                              </Text>
-                            </BlockStack>
-                          </InlineStack>
-                        </Box>
-                      )}
-
-                      <Box
-                        padding="200"
-                        background="bg-surface"
-                        borderRadius="150"
-                        borderWidth="025"
-                        borderColor="border-critical"
-                      >
-                        <InlineStack gap="200" blockAlign="center">
-                          <Badge tone="critical" size="small">
-                            [✕] Missing
-                          </Badge>
-                          <BlockStack gap="050">
-                            <Text as="p" variant="bodySm" fontWeight="semibold">
-                              Missing Schema.org JSON-LD
-                            </Text>
-                            <Text as="p" variant="bodyXs" tone="subdued">
-                              Search engines cannot verify live price, currency, or in-stock status.
-                            </Text>
-                          </BlockStack>
-                        </InlineStack>
-                      </Box>
-
-                      <Box
-                        padding="200"
-                        background="bg-surface"
-                        borderRadius="150"
-                        borderWidth="025"
-                        borderColor="border-critical"
-                      >
-                        <InlineStack gap="200" blockAlign="center">
-                          <Badge tone="critical" size="small">
-                            [✕] Missing
-                          </Badge>
-                          <BlockStack gap="050">
-                            <Text as="p" variant="bodySm" fontWeight="semibold">
-                              Zero Spec Table for Google AI Overviews
-                            </Text>
-                            <Text as="p" variant="bodyXs" tone="subdued">
-                              No structured HTML comparison matrix for search feature extraction.
-                            </Text>
-                          </BlockStack>
-                        </InlineStack>
-                      </Box>
-
-                      <Box
-                        padding="200"
-                        background="bg-surface"
-                        borderRadius="150"
-                        borderWidth="025"
-                        borderColor="border-critical"
-                      >
-                        <InlineStack gap="200" blockAlign="center">
-                          <Badge tone="critical" size="small">
-                            [✕] Missing
-                          </Badge>
-                          <BlockStack gap="050">
-                            <Text as="p" variant="bodySm" fontWeight="semibold">
-                              Missing Buyer Intent FAQs
-                            </Text>
-                            <Text as="p" variant="bodyXs" tone="subdued">
-                              Zero conversational Q&amp;As to ground ChatGPT Search and Perplexity citations.
-                            </Text>
-                          </BlockStack>
-                        </InlineStack>
-                      </Box>
-                    </BlockStack>
-                  </BlockStack>
-                </Box>
-
-                {/* Right Column: RankPilot AI Supercharged */}
-                <Box
-                  width="48%"
-                  padding="400"
-                  background="bg-surface"
-                  borderRadius="200"
-                  borderWidth="050"
-                  borderColor="border-success"
-                  shadow="100"
-                >
-                  <BlockStack gap="300">
-                    <InlineStack align="space-between" blockAlign="center">
-                      <Text as="h3" variant="headingSm" tone="success" fontWeight="bold">
-                        RANKPILOT OPTIMIZED
-                      </Text>
-                      <Badge tone="success">
-                        96/100 (AI &amp; Google Ready)
-                      </Badge>
-                    </InlineStack>
-
-                    <Divider />
-
-                    <BlockStack gap="100">
-                      <InlineStack align="space-between">
-                        <Text as="p" variant="bodySm" fontWeight="semibold" tone="success">
-                          Optimized SEO Title
-                        </Text>
-                        <Badge tone="success" size="small">
-                          {`${optimization.seoTitle.length}/60 chars`}
-                        </Badge>
-                      </InlineStack>
-                      <Text as="p" variant="bodyMd" fontWeight="semibold">
-                        {optimization.seoTitle}
-                      </Text>
-                    </BlockStack>
-
-                    <BlockStack gap="100">
-                      <InlineStack align="space-between">
-                        <Text as="p" variant="bodySm" fontWeight="semibold" tone="success">
-                          Semantic Meta Description
-                        </Text>
-                        <Badge tone="success" size="small">
-                          {`${optimization.seoDescription.length}/155 chars`}
-                        </Badge>
-                      </InlineStack>
-                      <Text as="p" variant="bodySm">
-                        {renderHighlightedDescription(optimization.seoDescription)}
-                      </Text>
-                    </BlockStack>
-
-                    {/* AI GEO-Optimized Image Alt Text */}
-                    <BlockStack gap="100">
-                      <InlineStack align="space-between" blockAlign="center">
-                        <Text as="p" variant="bodySm" fontWeight="semibold" tone="success">
-                          AI GEO-Optimized Image Alt Text
-                        </Text>
-                        <Badge tone={editableAltText.length <= 125 ? "success" : "critical"} size="small">
-                          {`${editableAltText.length}/125 chars (GEO Ready)`}
-                        </Badge>
-                      </InlineStack>
-                      <Box
-                        padding="200"
-                        background="bg-surface-secondary"
-                        borderRadius="150"
-                        borderWidth="025"
-                        borderColor="border-success"
-                      >
-                        <InlineStack gap="200" blockAlign="start">
-                          {product.featuredImage?.url ? (
-                            <img
-                              src={product.featuredImage.url}
-                              alt={editableAltText}
-                              style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 4, border: "1px solid #10b981", flexShrink: 0, marginTop: 4 }}
-                            />
-                          ) : (
-                            <div style={{ width: 44, height: 44, background: "#ecfdf5", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0, marginTop: 4 }}>
-                              <Icon source={ImageIcon} tone="success" />
-                            </div>
-                          )}
-                          <div style={{ flex: 1 }}>
-                            <TextField
-                              label="Image Alt Text"
-                              labelHidden
-                              value={editableAltText}
-                              onChange={(val) => setEditableAltText(val)}
-                              autoComplete="off"
-                              helpText="Entity-grounded physical & context description for Google Images & AI visual engines."
-                            />
-                          </div>
-                        </InlineStack>
-                      </Box>
-                    </BlockStack>
-
-                    {/* Formatted Spec Matrix (Rendered HTML) */}
-                    <BlockStack gap="100">
-                      <Text as="p" variant="bodySm" fontWeight="semibold" tone="success">
-                        Formatted Spec Matrix (Rendered HTML Table)
-                      </Text>
-                      <Box
-                        padding="200"
-                        background="bg-surface-secondary"
-                        borderRadius="150"
-                        borderWidth="025"
-                        borderColor="border"
-                      >
-                        <div
-                          dangerouslySetInnerHTML={{ __html: optimization.specMatrixHtml }}
-                          style={{
-                            overflowX: "auto",
-                            fontSize: 12,
-                            lineHeight: 1.4,
-                          }}
+              {/* Row-by-row diff */}
+              <Box borderWidth="025" borderColor="border" borderRadius="200" overflowX="hidden">
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, tableLayout: "fixed" }}>
+                  <colgroup>
+                    <col style={{ width: 120 }} />
+                    <col />
+                    <col />
+                  </colgroup>
+                  <thead>
+                    <tr style={{ background: "var(--p-color-bg-surface-secondary)", textAlign: "left" }}>
+                      <th style={{ padding: "6px 10px", fontWeight: 600 }}>Field</th>
+                      <th style={{ padding: "6px 10px", fontWeight: 600 }}>Current</th>
+                      <th style={{ padding: "6px 10px", fontWeight: 600, color: "var(--p-color-text-success)" }}>Optimized</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      {
+                        field: "SEO title",
+                        before: beforeTitle,
+                        beforeMeta: `${beforeTitle.length}/60`,
+                        after: <strong>{optimization.seoTitle}</strong>,
+                        afterMeta: `${optimization.seoTitle.length}/60`,
+                      },
+                      {
+                        field: "Meta description",
+                        before: beforeDesc,
+                        beforeMeta: product.seo?.description ? `${beforeDesc.length}/155` : "not set (Shopify uses description)",
+                        after: optimization.seoDescription,
+                        afterMeta: `${optimization.seoDescription.length}/155`,
+                      },
+                    ].map((r) => (
+                      <tr key={r.field} style={{ borderTop: "1px solid var(--p-color-border)", verticalAlign: "top" }}>
+                        <td style={{ padding: "6px 10px", fontWeight: 600 }}>{r.field}</td>
+                        <td style={{ padding: "6px 10px", color: "var(--p-color-text-secondary)" }}>
+                          {r.before}
+                          <div style={{ fontSize: 11, opacity: 0.8 }}>{r.beforeMeta}</div>
+                        </td>
+                        <td style={{ padding: "6px 10px" }}>
+                          {r.after}
+                          <div style={{ fontSize: 11, color: "var(--p-color-text-success)" }}>{r.afterMeta}</div>
+                        </td>
+                      </tr>
+                    ))}
+                    <tr style={{ borderTop: "1px solid var(--p-color-border)", verticalAlign: "top" }}>
+                      <td style={{ padding: "6px 10px", fontWeight: 600 }}>
+                        Image alt
+                        {product.featuredImage?.url && (
+                          <img
+                            src={product.featuredImage.url}
+                            alt=""
+                            style={{ display: "block", width: 36, height: 36, objectFit: "cover", borderRadius: 4, marginTop: 4, border: "1px solid var(--p-color-border)" }}
+                          />
+                        )}
+                      </td>
+                      <td style={{ padding: "6px 10px", color: beforeAltText ? "var(--p-color-text-secondary)" : "var(--p-color-text-critical)" }}>
+                        {beforeAltText || "Missing"}
+                      </td>
+                      <td style={{ padding: "4px 10px" }}>
+                        <TextField
+                          label="Image alt text"
+                          labelHidden
+                          size="slim"
+                          value={editableAltText}
+                          onChange={(val) => setEditableAltText(val)}
+                          autoComplete="off"
+                          error={editableAltText.length > 125 ? `${editableAltText.length}/125` : undefined}
                         />
-                      </Box>
-                    </BlockStack>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </Box>
 
-                    {/* Conversational FAQ Accordion (3 collapsible Q&As) */}
-                    <BlockStack gap="100">
-                      <Text as="p" variant="bodySm" fontWeight="semibold" tone="success">
-                        Conversational FAQ Accordion (3 Buyer Q&amp;As)
-                      </Text>
-                      <BlockStack gap="100">
-                        {optimization.faqList.map((faq, idx) => (
-                          <details
-                            key={idx}
-                            open={idx === 0}
-                            style={{
-                              border: "1px solid #dcdfe3",
-                              borderRadius: 6,
-                              padding: "8px 12px",
-                              backgroundColor: "#fafbfc",
-                              fontSize: 12,
-                            }}
-                          >
-                            <summary style={{ fontWeight: 600, cursor: "pointer", color: "#202223" }}>
-                              Q{idx + 1}: {faq.question}
-                            </summary>
-                            <p style={{ marginTop: 6, marginBottom: 0, color: "#5c5f62", lineHeight: 1.4 }}>
-                              {faq.answer}
-                            </p>
-                          </details>
-                        ))}
-                      </BlockStack>
-                    </BlockStack>
-                  </BlockStack>
-                </Box>
-              </InlineStack>
+              {/* Long content collapsed by default */}
+              <details style={{ border: "1px solid var(--p-color-border)", borderRadius: 8, padding: "6px 10px", fontSize: 13 }}>
+                <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+                  {`Added to description: spec table (${(optimization.specMatrixHtml.match(/<tr/gi) || []).length ? (optimization.specMatrixHtml.match(/<tr/gi) || []).length - 1 : 0} rows) & ${optimization.faqList.length} buyer FAQs`}
+                </summary>
+                <div style={{ marginTop: 8 }}>
+                  <div
+                    dangerouslySetInnerHTML={{ __html: optimization.specMatrixHtml }}
+                    style={{ overflowX: "auto", fontSize: 12, lineHeight: 1.4 }}
+                  />
+                  <div style={{ marginTop: 8 }}>
+                    {optimization.faqList.map((faq, idx) => (
+                      <p key={idx} style={{ margin: "0 0 6px", fontSize: 12, lineHeight: 1.4 }}>
+                        <strong>Q: {faq.question}</strong>
+                        <br />
+                        <span style={{ color: "var(--p-color-text-secondary)" }}>{faq.answer}</span>
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              </details>
             </BlockStack>
           )}
 
@@ -1059,119 +814,130 @@ export function OptimizationModal({
             </BlockStack>
           )}
 
-          {isApplying && (
-            <Box paddingBlockEnd="300">
-              <Banner tone="info">
-                <p>
-                  <strong>Pushing to Shopify Store...</strong> Updating product description, structured specification matrix, buyer FAQs, and GEO image alt text live in your Shopify catalog.
-                </p>
-              </Banner>
-            </Box>
-          )}
-
-          {applySuccess && (
-            <Box paddingBlockStart="200" paddingBlockEnd="400">
-              <Banner tone="success" title="Successfully Updated & Pushed to Shopify!">
-                <BlockStack gap="100">
+          <div
+            style={{
+              position: "sticky",
+              bottom: 0,
+              zIndex: 2,
+              background: "var(--p-color-bg-surface)",
+              paddingTop: 8,
+              marginBottom: -4,
+            }}
+          >
+            {isApplying && (
+              <Box paddingBlockEnd="200">
+                <Banner tone="info">
                   <p>
-                    ✓ <strong>{product.title}</strong> is now updated live in your Shopify catalog.
+                    <strong>Pushing to Shopify Store...</strong> Updating product description, structured specification matrix, buyer FAQs, and GEO image alt text live in your Shopify catalog.
                   </p>
-                  <p style={{ color: "#374151", fontSize: "13px" }}>
-                    Your product description now includes the specifications table and buyer FAQs, and the SEO title, meta description and image alt text are saved in Shopify.
-                  </p>
-                  {shop && (
-                    <p style={{ color: "#374151", fontSize: "13px" }}>
-                      To show the JSON-LD structured data on your storefront, turn on the{" "}
-                      <a
-                        href={`https://${shop}/admin/themes/current/editor?context=apps&activateAppId=82464865c45f23d73b21b486de6ace7a/schema_embed`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        RankPilot structured data app embed
-                      </a>{" "}
-                      in your theme (one time).
+                </Banner>
+              </Box>
+            )}
+
+            {applySuccess && (
+              <Box paddingBlockEnd="200">
+                <Banner tone="success" title="Successfully Updated & Pushed to Shopify!">
+                  <BlockStack gap="100">
+                    <p>
+                      ✓ <strong>{product.title}</strong> is now updated live in your Shopify catalog.
                     </p>
-                  )}
-                </BlockStack>
-              </Banner>
-            </Box>
-          )}
-
-          {applyError && !isApplying && !applySuccess && (
-            <Box paddingBlockEnd="300">
-              <Banner tone="critical" title="Could not complete Shopify push">
-                <BlockStack gap="100">
-                  <p>{applyError}</p>
-                  <p style={{ fontSize: "12px", color: "#6b7280" }}>
-                    Changes are saved in your RankPilot catalog. Click "Apply & Push to Store" below to retry sending updates to Shopify.
-                  </p>
-                </BlockStack>
-              </Banner>
-            </Box>
-          )}
-
-          <Divider />
-
-          <InlineStack align="space-between" blockAlign="center">
-            {/* Left Action: Revert to Previous Snapshot */}
-            {product.hasRollback && onRevert && !applySuccess ? (
-              <Button
-                variant="plain"
-                tone="critical"
-                icon={UndoIcon}
-                disabled={isApplying}
-                onClick={() => onRevert(product.id)}
-              >
-                Revert to Previous Snapshot
-              </Button>
-            ) : (
-              <Text as="span" variant="bodySm" tone="subdued">
-                {applySuccess ? "✓ Live on Shopify" : "Baseline Snapshot Active"}
-              </Text>
+                    <p style={{ color: "#374151", fontSize: "13px" }}>
+                      Your product description now includes the specifications table and buyer FAQs, and the SEO title, meta description and image alt text are saved in Shopify.
+                    </p>
+                    {shop && (
+                      <p style={{ color: "#374151", fontSize: "13px" }}>
+                        To show the JSON-LD structured data on your storefront, turn on the{" "}
+                        <a
+                          href={`https://${shop}/admin/themes/current/editor?context=apps&activateAppId=82464865c45f23d73b21b486de6ace7a/schema_embed`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          RankPilot structured data app embed
+                        </a>{" "}
+                        in your theme (one time).
+                      </p>
+                    )}
+                  </BlockStack>
+                </Banner>
+              </Box>
             )}
 
-            {/* Right Action: Cancel and Apply / Done */}
-            {applySuccess ? (
-              <ButtonGroup>
-                {shop && (
-                  <Button
-                    variant="plain"
-                    url={
-                      product.id && !product.id.includes("8472917")
-                        ? `https://admin.shopify.com/store/${shop.replace(".myshopify.com", "")}/products/${product.id.replace("gid://shopify/Product/", "")}`
-                        : `https://admin.shopify.com/store/${shop.replace(".myshopify.com", "")}/products`
-                    }
-                    target="_blank"
-                  >
-                    {product.id && !product.id.includes("8472917")
-                      ? "View in Shopify Products ↗"
-                      : "View Shopify Products Catalog ↗"}
-                  </Button>
-                )}
+            {applyError && !isApplying && !applySuccess && (
+              <Box paddingBlockEnd="200">
+                <Banner tone="critical" title="Could not complete Shopify push">
+                  <BlockStack gap="100">
+                    <p>{applyError}</p>
+                    <p style={{ fontSize: "12px", color: "#6b7280" }}>
+                      Changes are saved in your RankPilot catalog. Click "Apply & Push to Store" below to retry sending updates to Shopify.
+                    </p>
+                  </BlockStack>
+                </Banner>
+              </Box>
+            )}
+
+            <Divider />
+
+            <InlineStack align="space-between" blockAlign="center">
+              {/* Left Action: Revert to Previous Snapshot */}
+              {product.hasRollback && onRevert && !applySuccess ? (
                 <Button
-                  variant="primary"
-                  tone="success"
-                  onClick={onClose}
-                >
-                  Done
-                </Button>
-              </ButtonGroup>
-            ) : (
-              <ButtonGroup>
-                <Button onClick={onClose} disabled={isApplying}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="primary"
-                  loading={isApplying}
+                  variant="plain"
+                  tone="critical"
+                  icon={UndoIcon}
                   disabled={isApplying}
-                  onClick={() => onApply(product, { ...optimization, imageAltText: editableAltText })}
+                  onClick={() => onRevert(product.id)}
                 >
-                  {isApplying ? "Pushing to Store..." : "Apply & Push to Store"}
+                  Revert to Previous Snapshot
                 </Button>
-              </ButtonGroup>
-            )}
-          </InlineStack>
+              ) : (
+                <Text as="span" variant="bodySm" tone="subdued">
+                  {applySuccess ? "✓ Live on Shopify" : "Baseline Snapshot Active"}
+                </Text>
+              )}
+
+              {/* Right Action: Cancel and Apply / Done */}
+              {applySuccess ? (
+                <ButtonGroup>
+                  {shop && (
+                    <Button
+                      variant="plain"
+                      url={
+                        product.id && !product.id.includes("8472917")
+                          ? `https://admin.shopify.com/store/${shop.replace(".myshopify.com", "")}/products/${product.id.replace("gid://shopify/Product/", "")}`
+                          : `https://admin.shopify.com/store/${shop.replace(".myshopify.com", "")}/products`
+                      }
+                      target="_blank"
+                    >
+                      {product.id && !product.id.includes("8472917")
+                        ? "View in Shopify Products ↗"
+                        : "View Shopify Products Catalog ↗"}
+                    </Button>
+                  )}
+                  <Button
+                    variant="primary"
+                    tone="success"
+                    onClick={onClose}
+                  >
+                    Done
+                  </Button>
+                </ButtonGroup>
+              ) : (
+                <ButtonGroup>
+                  <Button onClick={onClose} disabled={isApplying}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    loading={isApplying}
+                    disabled={isApplying}
+                    onClick={() => onApply(product, { ...optimization, imageAltText: editableAltText })}
+                  >
+                    {isApplying ? "Pushing to Store..." : "Apply & Push to Store"}
+                  </Button>
+                </ButtonGroup>
+              )}
+            </InlineStack>
+          </div>
         </BlockStack>
       </Modal.Section>
     </Modal>
