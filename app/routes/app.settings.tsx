@@ -61,6 +61,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       indexNowKey: setting.indexNowKey || "rankpilot-demo-indexnow-key-2025",
       autoPingIndexNow: setting.autoPingIndexNow,
       autopilotEnabled: setting.autopilotEnabled,
+      autoOptimizeNewProducts: storeConfig
+        ? storeConfig.zeroClickAutopilot
+        : Boolean(setting.subscriptionId && setting.status === "ACTIVE"),
       storeDomain: setting.storeDomain || "demo.myshopify.com",
       plan: setting.plan || "PRO",
       weeklyDigestEmail: storeConfig?.weeklyDigestEmail || "merchant@store.com",
@@ -78,6 +81,7 @@ export default function SettingsRoute() {
   const [storeDomain, setStoreDomain] = useState(setting.storeDomain);
   const [autoPingIndexNow, setAutoPingIndexNow] = useState(setting.autoPingIndexNow);
   const [autopilotEnabled, setAutopilotEnabled] = useState(setting.autopilotEnabled);
+  const [autoOptimizeNewProducts, setAutoOptimizeNewProducts] = useState(setting.autoOptimizeNewProducts);
   const [weeklyDigestEmail, setWeeklyDigestEmail] = useState(setting.weeklyDigestEmail);
 
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
@@ -101,6 +105,7 @@ export default function SettingsRoute() {
         storeDomain,
         autoPingIndexNow: String(autoPingIndexNow),
         autopilotEnabled: String(autopilotEnabled),
+        autoOptimizeNewProducts: String(autoOptimizeNewProducts),
         weeklyDigestEmail,
       },
       { method: "POST", action: "/api/settings", encType: "application/json" }
@@ -174,7 +179,13 @@ export default function SettingsRoute() {
                     onChange={setAutopilotEnabled}
                   />
                   <Checkbox
-                    label="Dispatch Instant IndexNow ping whenever a product is optimized or stock changes"
+                    label="Auto-optimize new products"
+                    helpText="When you add a product, RankPilot writes its spec table, FAQs and schema from your real product data. Uses AI credits."
+                    checked={autoOptimizeNewProducts}
+                    onChange={setAutoOptimizeNewProducts}
+                  />
+                  <Checkbox
+                    label="Send changed product URLs to Bing via IndexNow"
                     checked={autoPingIndexNow}
                     onChange={setAutoPingIndexNow}
                   />

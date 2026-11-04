@@ -67,37 +67,60 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     payload,
   });
 
-  // Check store autopilot configuration
+  // "Auto-optimize new products" setting (StoreConfig.zeroClickAutopilot).
+  // If the merchant never chose, default ON only for shops with an active paid subscription.
   const config = await db.storeConfig.findUnique({ where: { shop } });
   const appSetting = await db.appSetting.findUnique({ where: { shop } });
+  const hasPaidPlan = Boolean(appSetting?.subscriptionId && appSetting?.status === "ACTIVE");
+  const isAutoOptimizeOn = config ? config.zeroClickAutopilot : hasPaidPlan;
 
-  const isAutopilotOn =
-    config?.zeroClickAutopilot ?? appSetting?.autopilotEnabled ?? true;
+  const baseRecord = {
+    productTitle: title,
+    productHandle: handle,
+    originalTitle: title,
+    originalBodyHtml: payload.body_html || "",
+  };
 
-  if (!isAutopilotOn) {
-    console.log(`[Webhook products/create] Autopilot disabled for ${shop}. Storing in NEEDS_OPTIMIZATION status.`);
-    await db.productOptimization.upsert({
-      where: { productId },
-      update: {
-        productTitle: title,
-        productHandle: handle,
-        status: "NEEDS_OPTIMIZATION",
-        geoScore: 38,
-      },
-      create: {
-        shop,
-        productId,
-        productTitle: title,
-        productHandle: handle,
-        status: "NEEDS_OPTIMIZATION",
-        geoScore: 38,
-        originalTitle: title,
-        originalBodyHtml: payload.body_html || "",
-      },
-    });
-    return json({ success: true, optimized: false, message: "Stored as NEEDS_OPTIMIZATION" });
+  if (!isAutoOptimizeOn) {
+    const existing = await db.productOptimization.findUnique({ where: { productId } });
+    if (!existing) {
+      await db.productOptimization.create({
+        data: { shop, productId, ...baseRecord, status: "NEEDS_OPTIMIZATION", geoScore: 38 },
+      }).catch(() => undefined); // concurrent retry already created it
+    }
+    return json({ success: true, optimized: false, message: "Auto-optimize off; stored as NEEDS_OPTIMIZATION" });
   }
 
+  // Idempotency: claim the product before calling Gemini so Shopify webhook retries
+  // (or duplicate deliveries) never double-optimize or double-write.
+  const STALE_CLAIM_MS = 10 * 60 * 1000;
+  let claimed = false;
+  try {
+    await db.productOptimization.create({
+      data: { shop, productId, ...baseRecord, status: "AUTO_OPTIMIZING", geoScore: 38 },
+    });
+    claimed = true;
+  } catch {
+    // Row exists: only take over if it was never optimized and no fresh claim is in flight.
+    const res = await db.productOptimization.updateMany({
+      where: {
+        productId,
+        lastOptimizedAt: null,
+        OR: [
+          { status: "NEEDS_OPTIMIZATION" },
+          { status: "AUTO_OPTIMIZING", updatedAt: { lt: new Date(Date.now() - STALE_CLAIM_MS) } },
+        ],
+      },
+      data: { status: "AUTO_OPTIMIZING" },
+    });
+    claimed = res.count > 0;
+  }
+  if (!claimed) {
+    console.log(`[Webhook products/create] ${productId} already optimized or in progress; skipping (idempotent).`);
+    return json({ success: true, optimized: false, message: "Already handled" });
+  }
+
+  try {
   // Zero-Click Autopilot is active: Generate full GEO optimization
   const payloadVariants: any[] = Array.isArray(payload.variants) ? payload.variants : [];
   const variantPrices = payloadVariants.map((v) => parseFloat(v.price)).filter((n) => isFinite(n) && n > 0);
@@ -186,18 +209,30 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       shop,
       productId,
       actionType: "AUTO_OPTIMIZE_ON_CREATE",
-      details: `Zero-Click Autopilot optimized "${title}" (GEO Score: ${optimization.aiScore}/100)`,
+      details: `Auto-optimized new product "${title}" (GEO Score: ${optimization.aiScore}/100)`,
     },
   });
 
   // Push to IndexNow
-  await submitToIndexNow({
-    url: `https://${shop}/products/${handle}`,
-    shop,
-  });
+  if (appSetting?.autoPingIndexNow ?? true) {
+    await submitToIndexNow({ url: `https://${shop}/products/${handle}`, shop }).catch(() => undefined);
+  }
 
-    console.log(`[Webhook products/create] Zero-Click Autopilot successfully optimized "${title}"`);
+    console.log(`[Webhook products/create] Auto-optimized "${title}"`);
     return json({ success: true, optimized: true, productId, geoScore: optimization.aiScore });
+  } catch (genErr: any) {
+    // Gemini failure / rate limit: release the claim so the merchant can optimize manually later.
+    // Return 200 so Shopify does not hammer us with retries while the AI quota is exhausted.
+    console.warn(`[Webhook products/create] Auto-optimize failed for ${productId}:`, genErr?.message || genErr);
+    await db.productOptimization
+      .updateMany({ where: { productId, status: "AUTO_OPTIMIZING" }, data: { status: "NEEDS_OPTIMIZATION" } })
+      .catch(() => undefined);
+    await db.autopilotLog
+      .create({ data: { shop, productId, actionType: "AUTO_OPTIMIZE_FAILED", details: `Auto-optimize skipped for "${title}": AI unavailable or rate-limited. Optimize manually from the dashboard.` } })
+      .catch(() => undefined);
+    return json({ success: true, optimized: false, message: "AI unavailable; left as NEEDS_OPTIMIZATION" });
+  }
+
   } catch (error) {
     console.error("[Webhook products/create] Unhandled error:", error);
     return new Response(null, { status: 200 });

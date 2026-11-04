@@ -46,15 +46,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       storeDomain,
       isOnboarded,
       autopilotEnabled,
+      autoOptimizeNewProducts,
     } = body;
 
     const dataToUpdate: any = {};
     if (geminiApiKey !== undefined) dataToUpdate.geminiApiKey = geminiApiKey?.trim() || null;
     if (indexNowKey !== undefined) dataToUpdate.indexNowKey = indexNowKey?.trim() || null;
-    if (autoPingIndexNow !== undefined) dataToUpdate.autoPingIndexNow = Boolean(autoPingIndexNow);
+    if (autoPingIndexNow !== undefined) dataToUpdate.autoPingIndexNow = autoPingIndexNow === true || autoPingIndexNow === "true";
     if (storeDomain !== undefined) dataToUpdate.storeDomain = storeDomain?.trim() || null;
     if (isOnboarded !== undefined) dataToUpdate.isOnboarded = Boolean(isOnboarded);
-    if (autopilotEnabled !== undefined) dataToUpdate.autopilotEnabled = Boolean(autopilotEnabled);
+    if (autopilotEnabled !== undefined) dataToUpdate.autopilotEnabled = autopilotEnabled === true || autopilotEnabled === "true";
 
     const updated = await db.appSetting.upsert({
       where: { shop },
@@ -68,7 +69,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // Also sync to StoreConfig
     const configUpdate: any = {};
     if (isOnboarded !== undefined) configUpdate.isOnboarded = Boolean(isOnboarded);
-    if (autopilotEnabled !== undefined) configUpdate.zeroClickAutopilot = Boolean(autopilotEnabled);
+    if (autoOptimizeNewProducts !== undefined)
+      configUpdate.zeroClickAutopilot = autoOptimizeNewProducts === true || autoOptimizeNewProducts === "true";
 
     if (Object.keys(configUpdate).length > 0) {
       await db.storeConfig.upsert({
