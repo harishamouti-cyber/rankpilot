@@ -226,7 +226,7 @@ export function SetupGuide({
                   </InlineStack>
 
                   <Text as="p" variant="bodySm" tone="subdued">
-                    24/7 catalog drift sentinel &amp; instant IndexNow engine active.
+                    Catalog monitoring on; changed URLs are sent to Bing via IndexNow.
                   </Text>
 
                   {!step3Complete ? (

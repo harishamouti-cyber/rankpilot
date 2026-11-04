@@ -1,5 +1,5 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import { useLoaderData, useNavigate, useFetcher } from "@remix-run/react";
 import React, { useState, useEffect } from "react";
 import {
@@ -81,7 +81,12 @@ export function getGeoScoreColors(score: number): GeoScoreColors {
   };
 }
 
+// Hidden: citation tracking used simulated data. Redirect until a real data source exists.
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  if (process.env.CITATIONS_ENABLED !== "true") {
+    const u = new URL(request.url);
+    return redirect(`/app${u.search}`);
+  }
   const url = new URL(request.url);
   let shop = url.searchParams.get("shop") || "demo.myshopify.com";
   const isPreview = shop.includes("demo") || url.searchParams.get("preview") === "true";
@@ -106,6 +111,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
+  if (process.env.CITATIONS_ENABLED !== "true") return redirect("/app");
   const url = new URL(request.url);
   let shop = url.searchParams.get("shop") || "demo.myshopify.com";
   const isPreview = shop.includes("demo") || url.searchParams.get("preview") === "true";

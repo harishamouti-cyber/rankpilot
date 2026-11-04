@@ -1,9 +1,10 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { getStrikingDistanceQueries, boostQueryToPage1 } from "~/services/gsc.server";
+import { getStrikingDistanceQueries, boostQueryToPage1, isGscEnabled } from "~/services/gsc.server";
 import { authenticate } from "~/shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  if (!isGscEnabled()) return json({ error: "Not found" }, { status: 404 });
   const url = new URL(request.url);
   const shop = url.searchParams.get("shop") || "demo.myshopify.com";
   const queries = await getStrikingDistanceQueries(shop);
@@ -11,6 +12,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
+  if (!isGscEnabled()) return json({ error: "Not found" }, { status: 404 });
   if (request.method !== "POST") {
     return json({ error: "Method not allowed" }, { status: 405 });
   }

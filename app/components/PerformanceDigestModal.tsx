@@ -68,7 +68,7 @@ export function PerformanceDigestModal({
                   Store Catalog &amp; Search Indexing Digest
                 </Text>
                 <Text as="p" variant="bodySm" tone="subdued">
-                  7-day catalog audit tracking real-time IndexNow submissions, live schema metafields, and rollback snapshots.
+                  7-day catalog audit tracking IndexNow submissions, live schema metafields, and rollback snapshots.
                 </Text>
               </BlockStack>
               <Badge tone={hasActivity ? "success" : "info"} size="large">
@@ -80,7 +80,7 @@ export function PerformanceDigestModal({
           {!hasActivity && (
             <Banner tone="info">
               <Text as="p" variant="bodySm">
-                Collecting initial 7-day data. As soon as you optimize products or push catalog changes to Shopify, your real-time IndexNow pings, backup revisions, and active metafields will be reported here.
+                Collecting initial 7-day data. As soon as you optimize products or push catalog changes to Shopify, your IndexNow submissions, backup revisions, and active metafields will be reported here.
               </Text>
             </Banner>
           )}
@@ -195,7 +195,7 @@ export function PerformanceDigestModal({
                 <Text as="span" variant="bodySm">
                   Search Engine Verification
                 </Text>
-                <Badge tone="info">IndexNow &amp; Google AI Synced</Badge>
+                <Badge tone="info">Sent to Bing via IndexNow</Badge>
               </InlineStack>
             </BlockStack>
           </Card>

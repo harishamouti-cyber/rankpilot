@@ -823,7 +823,7 @@ export default function AppDashboard() {
 
       setToastTone("success");
       const successMsg = `"${product.title}" pushed to Shopify store! Description, Spec Table & FAQs are now live in your store. ${
-        data.indexNowPinged ? "IndexNow ping dispatched to search engines." : ""
+        data.indexNowPinged ? "Sent to Bing via IndexNow." : ""
       }`;
       setToastMessage(successMsg);
     } catch (err: any) {
@@ -1131,7 +1131,7 @@ export default function AppDashboard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Re-index ping failed");
       setToastTone("success");
-      setToastMessage(`IndexNow ping sent for "${product.title}"`);
+      setToastMessage(`Sent to Bing via IndexNow: "${product.title}"`);
       setMetrics((prev) => ({ ...prev, indexPingsCount: prev.indexPingsCount + 1 }));
     } catch (err: any) {
       setToastTone("critical");
@@ -1326,7 +1326,7 @@ export default function AppDashboard() {
                     },
                   },
                   {
-                    content: "Instant Re-Index (IndexNow)",
+                    content: "Send to Bing (IndexNow)",
                     icon: RefreshIcon,
                     onAction: () => {
                       setActiveActionMenuId(null);
@@ -1403,19 +1403,9 @@ export default function AppDashboard() {
               },
             },
             {
-              content: `Striking Distance Radar (${strikingQueries.length})`,
-              icon: TargetIcon,
-              onAction: () => setIsStrikingModalOpen(true),
-            },
-            {
               content: "Weekly Performance Digest",
               icon: ChartLineIcon,
               onAction: () => setIsDigestModalOpen(true),
-            },
-            {
-              content: "Reverse AI Citations",
-              icon: ChartLineIcon,
-              onAction: () => navigate(`/app/citations?shop=${encodeURIComponent(shop)}`),
             },
             {
               content: "Subscription & Billing",
@@ -1493,7 +1483,7 @@ export default function AppDashboard() {
                   <BlockStack gap="150">
                     <InlineStack gap="200" blockAlign="center">
                       <Text as="h3" variant="headingSm" fontWeight="bold">
-                        Opportunity Radar: High Impact AI Citation Recovery
+                        Products not optimized yet
                       </Text>
                       <Badge tone="warning" size="small">
                         Action Required
@@ -1502,9 +1492,7 @@ export default function AppDashboard() {
                     <Text as="p" variant="bodySm">
                       {`${unoptimizedProducts.length} product${
                         unoptimizedProducts.length > 1 ? "s have" : " has"
-                      } high search impressions but low AI visibility. Running 1-Click Optimization can recover estimated ${
-                        unoptimizedProducts.length * 225
-                      } monthly AI citations.`}
+                      } no spec table, buyer FAQs or structured data yet. Optimize to add them from your real product data.`}
                     </Text>
                   </BlockStack>
                 </InlineStack>
@@ -1660,7 +1648,7 @@ export default function AppDashboard() {
                 <div
                   onClick={() => setIsIndexNowModalOpen(true)}
                   style={{ cursor: "pointer" }}
-                  title="Click to view real-time IndexNow dispatch logs"
+                  title="View IndexNow send log"
                 >
                   <BlockStack gap="100">
                     <InlineStack align="space-between" blockAlign="center">
@@ -2008,7 +1996,7 @@ export default function AppDashboard() {
       <Modal
         open={isIndexNowModalOpen}
         onClose={() => setIsIndexNowModalOpen(false)}
-        title="Real-Time IndexNow Dispatch Log"
+        title="IndexNow send log"
         size="large"
         secondaryActions={[
           {
@@ -2021,7 +2009,7 @@ export default function AppDashboard() {
           <BlockStack gap="400">
             <Banner tone="info">
               <Text as="p" variant="bodySm">
-                IndexNow pings notify Bing, Yandex and other IndexNow engines when product pages change. Each engine decides when to recrawl.
+                Changed product URLs are sent to Bing (and other IndexNow engines) via IndexNow. This asks them to recrawl; it does not guarantee indexing or rankings.
               </Text>
             </Banner>
             <div style={{ maxHeight: 380, overflowY: "auto" }}>

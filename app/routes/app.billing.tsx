@@ -516,7 +516,7 @@ export default function BillingPage() {
   return (
     <Page
       title="Plans & Subscription"
-      subtitle="Unlock automated Google AI Overviews, Perplexity citations, and full catalog GEO optimization."
+      subtitle="Unlock full-catalog optimization: specs, buyer FAQs and structured data from your real product data."
       backAction={{
         content: "Back to Dashboard",
         onAction: () => navigate(`/app?shop=${encodeURIComponent(shop)}`),
@@ -627,7 +627,7 @@ export default function BillingPage() {
                   "Google AI Overview & Generative Spec Matrices for all products",
                   "High-Converting Buyer FAQ Generator tailored for voice & AI search",
                   "Schema.org JSON-LD Rich Data injected automatically into products",
-                  "Instant Real-Time IndexNow Crawler Submissions (Bing, Yandex, Copilot)",
+                  "Changed URLs sent to Bing via IndexNow",
                   "1-Click Rollback Snapshot Engine with permanent version control",
                   "24/7 Autopilot Catalog Sentinel (Schema drift & out-of-stock guard)",
                   "Competitor Semantic Gap Stealer (Analyze Amazon & DTC competitors)",

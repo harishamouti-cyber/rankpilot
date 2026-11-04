@@ -231,10 +231,10 @@ export function WelcomeModal({
                     <CheckCircleIcon width={20} height={20} fill="#008060" />
                     <BlockStack gap="050">
                       <Text as="h4" variant="bodyMd" fontWeight="semibold">
-                        Instant IndexNow Discovery
+                        Sent to Bing via IndexNow
                       </Text>
                       <Text as="p" variant="bodySm" tone="subdued">
-                        Pings Bing, Yandex, and Perplexity crawlers the instant inventory or specs update for same-hour indexation.
+                        When specs or stock change, the product URL is sent to Bing via IndexNow to request a recrawl. Indexing is up to the search engine.
                       </Text>
                     </BlockStack>
                   </InlineStack>

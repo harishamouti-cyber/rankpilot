@@ -1,4 +1,8 @@
 import { db } from "~/db.server";
+
+/** Search Console integration is off until real Google OAuth credentials are configured. */
+export const isGscEnabled = () =>
+  process.env.GSC_ENABLED === "true" && !!process.env.GSC_CLIENT_ID && !!process.env.GSC_CLIENT_SECRET;
 import { executeGraphQLWithThrottling, PRODUCT_SET_MUTATION } from "./shopify.server";
 
 export interface StrikingQuery {
@@ -26,8 +30,8 @@ export async function refreshGSCAccessToken(shop: string = "demo.myshopify.com")
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        client_id: process.env.GSC_CLIENT_ID || "rankpilot_gsc_client",
-        client_secret: process.env.GSC_CLIENT_SECRET || "rankpilot_gsc_secret",
+        client_id: process.env.GSC_CLIENT_ID || "",
+        client_secret: process.env.GSC_CLIENT_SECRET || "",
         refresh_token: config.gscRefreshToken,
         grant_type: "refresh_token",
       }),
@@ -35,14 +39,14 @@ export async function refreshGSCAccessToken(shop: string = "demo.myshopify.com")
 
     if (!res.ok) {
       console.warn("[GSC Bridge] Refresh token request failed, using cached credentials");
-      return "simulated_gsc_access_token_2026";
+      return null;
     }
 
     const data = await res.json();
     return data.access_token || null;
   } catch (err) {
     console.warn("[GSC Bridge] OAuth token refresh network error:", err);
-    return "simulated_gsc_access_token_2026";
+    return null;
   }
 }
 
@@ -51,6 +55,7 @@ export async function refreshGSCAccessToken(shop: string = "demo.myshopify.com")
  * position >= 4.0 && position <= 15.0, impressions > 100, ctr < 0.03
  */
 export async function getStrikingDistanceQueries(shop: string = "demo.myshopify.com"): Promise<StrikingQuery[]> {
+  if (!isGscEnabled()) return [];
   const existing = await db.strikingDistanceQuery.findMany({
     where: { shop },
     orderBy: { impressions: "desc" },
