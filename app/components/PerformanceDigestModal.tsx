@@ -63,7 +63,7 @@ export function PerformanceDigestModal({
         <BlockStack gap="400">
           <Card background="bg-surface-secondary">
             <InlineStack align="space-between" blockAlign="center" wrap>
-              <BlockStack gap="050">
+              <BlockStack gap="200">
                 <Text as="h3" variant="headingMd" fontWeight="bold">
                   Store Catalog &amp; Search Indexing Digest
                 </Text>
@@ -85,9 +85,8 @@ export function PerformanceDigestModal({
             </Banner>
           )}
 
-          <InlineStack gap="300" align="space-between" wrap={false}>
+          <div className="rankpilot-metric-grid">
             <Box
-              width="23%"
               padding="300"
               background="bg-surface"
               borderRadius="200"
@@ -108,7 +107,6 @@ export function PerformanceDigestModal({
             </Box>
 
             <Box
-              width="23%"
               padding="300"
               background="bg-surface"
               borderRadius="200"
@@ -129,7 +127,6 @@ export function PerformanceDigestModal({
             </Box>
 
             <Box
-              width="23%"
               padding="300"
               background="bg-surface"
               borderRadius="200"
@@ -152,7 +149,6 @@ export function PerformanceDigestModal({
             </Box>
 
             <Box
-              width="23%"
               padding="300"
               background="bg-surface"
               borderRadius="200"
@@ -171,7 +167,7 @@ export function PerformanceDigestModal({
                 </Text>
               </BlockStack>
             </Box>
-          </InlineStack>
+          </div>
 
           <Card>
             <BlockStack gap="200">

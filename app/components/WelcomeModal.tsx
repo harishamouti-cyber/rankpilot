@@ -153,18 +153,17 @@ export function WelcomeModal({
                 Why Top Merchants Choose RankPilot:
               </Text>
 
-              <InlineStack gap="400" align="space-between">
+              <div className="rankpilot-pair-grid">
                 <Box
-                  width="48%"
                   padding="300"
                   background="bg-surface"
                   borderRadius="150"
                   borderWidth="025"
                   borderColor="border"
                 >
-                  <InlineStack gap="200" blockAlign="start">
+                  <div className="rankpilot-icon-row">
                     <CheckCircleIcon width={20} height={20} fill="#008060" />
-                    <BlockStack gap="050">
+                    <BlockStack gap="200">
                       <Text as="h4" variant="bodyMd" fontWeight="semibold">
                         Zero Theme Speed Impact
                       </Text>
@@ -172,20 +171,19 @@ export function WelcomeModal({
                         100% server-side GraphQL &amp; native Metafields. Zero client-side script tags or theme slowing code.
                       </Text>
                     </BlockStack>
-                  </InlineStack>
+                  </div>
                 </Box>
 
                 <Box
-                  width="48%"
                   padding="300"
                   background="bg-surface"
                   borderRadius="150"
                   borderWidth="025"
                   borderColor="border"
                 >
-                  <InlineStack gap="200" blockAlign="start">
+                  <div className="rankpilot-icon-row">
                     <CheckCircleIcon width={20} height={20} fill="#008060" />
-                    <BlockStack gap="050">
+                    <BlockStack gap="200">
                       <Text as="h4" variant="bodyMd" fontWeight="semibold">
                         High-Citation Spec Matrices
                       </Text>
@@ -193,22 +191,19 @@ export function WelcomeModal({
                         Generative AI synthesizes tables. Auto-generate dense specification matrices that LLMs extract for answers.
                       </Text>
                     </BlockStack>
-                  </InlineStack>
+                  </div>
                 </Box>
-              </InlineStack>
 
-              <InlineStack gap="400" align="space-between">
                 <Box
-                  width="48%"
                   padding="300"
                   background="bg-surface"
                   borderRadius="150"
                   borderWidth="025"
                   borderColor="border"
                 >
-                  <InlineStack gap="200" blockAlign="start">
+                  <div className="rankpilot-icon-row">
                     <CheckCircleIcon width={20} height={20} fill="#008060" />
-                    <BlockStack gap="050">
+                    <BlockStack gap="200">
                       <Text as="h4" variant="bodyMd" fontWeight="semibold">
                         Conversational Buyer FAQs
                       </Text>
@@ -216,20 +211,19 @@ export function WelcomeModal({
                         Target long-tail purchase intents ("is it waterproof?", "fits 15-inch laptop?") to win direct search citations.
                       </Text>
                     </BlockStack>
-                  </InlineStack>
+                  </div>
                 </Box>
 
                 <Box
-                  width="48%"
                   padding="300"
                   background="bg-surface"
                   borderRadius="150"
                   borderWidth="025"
                   borderColor="border"
                 >
-                  <InlineStack gap="200" blockAlign="start">
+                  <div className="rankpilot-icon-row">
                     <CheckCircleIcon width={20} height={20} fill="#008060" />
-                    <BlockStack gap="050">
+                    <BlockStack gap="200">
                       <Text as="h4" variant="bodyMd" fontWeight="semibold">
                         Sent to Bing via IndexNow
                       </Text>
@@ -237,9 +231,9 @@ export function WelcomeModal({
                         When specs or stock change, the product URL is sent to Bing via IndexNow to request a recrawl. Indexing is up to the search engine.
                       </Text>
                     </BlockStack>
-                  </InlineStack>
+                  </div>
                 </Box>
-              </InlineStack>
+              </div>
             </BlockStack>
 
             <Divider />
@@ -412,7 +406,7 @@ export function WelcomeModal({
                   borderWidth="025"
                   borderColor="border"
                 >
-                  <BlockStack gap="050" align="center">
+                  <BlockStack gap="200" align="center">
                     <Text as="p" variant="bodyXs" tone="subdued" alignment="center">
                       BASELINE SCORE
                     </Text>
@@ -448,7 +442,7 @@ export function WelcomeModal({
                           backgroundColor: "#d72c0d",
                         }}
                       />
-                      <BlockStack gap="050">
+                      <BlockStack gap="200">
                         <Text as="p" variant="bodyMd" fontWeight="semibold">
                           Missing Structured Schema Graph
                         </Text>
@@ -478,7 +472,7 @@ export function WelcomeModal({
                           backgroundColor: "#d72c0d",
                         }}
                       />
-                      <BlockStack gap="050">
+                      <BlockStack gap="200">
                         <Text as="p" variant="bodyMd" fontWeight="semibold">
                           No High-Density Specification Matrices
                         </Text>
@@ -508,7 +502,7 @@ export function WelcomeModal({
                           backgroundColor: "#d72c0d",
                         }}
                       />
-                      <BlockStack gap="050">
+                      <BlockStack gap="200">
                         <Text as="p" variant="bodyMd" fontWeight="semibold">
                           Zero Conversational Buyer FAQs
                         </Text>

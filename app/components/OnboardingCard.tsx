@@ -45,7 +45,7 @@ export function OnboardingCard({
     <Card background="bg-surface">
       <BlockStack gap="400">
         <InlineStack align="space-between" blockAlign="center">
-          <BlockStack gap="050">
+          <BlockStack gap="200">
             <InlineStack gap="200" blockAlign="center">
               <Text as="h2" variant="headingMd" fontWeight="bold">
                 RankPilot Setup: 3 Steps to AI & Google Dominance
@@ -74,10 +74,9 @@ export function OnboardingCard({
 
         <Divider />
 
-        <InlineStack gap="400" align="space-between">
+        <div className="rankpilot-card-grid">
           {/* Step 1 */}
           <Box
-            width="31%"
             padding="300"
             background="bg-surface-secondary"
             borderRadius="200"
@@ -91,18 +90,19 @@ export function OnboardingCard({
                 </Text>
                 <Badge tone="success" size="small">Completed</Badge>
               </InlineStack>
-              <InlineStack gap="150" blockAlign="center">
+              <div className="rankpilot-icon-row">
                 <CheckCircleIcon width={18} height={18} fill="#008060" />
-                <Text as="p" variant="bodySm">
-                  {totalCount} products cataloged &amp; scanned for GEO gaps.
-                </Text>
-              </InlineStack>
+                <div className="rankpilot-icon-row__text">
+                  <Text as="p" variant="bodySm">
+                    {totalCount} products cataloged &amp; scanned for GEO gaps.
+                  </Text>
+                </div>
+              </div>
             </BlockStack>
           </Box>
 
           {/* Step 2 */}
           <Box
-            width="31%"
             padding="300"
             background={step2Complete ? "bg-surface-secondary" : "bg-surface-active"}
             borderRadius="200"
@@ -143,7 +143,6 @@ export function OnboardingCard({
 
           {/* Step 3 */}
           <Box
-            width="31%"
             padding="300"
             background="bg-surface-secondary"
             borderRadius="200"
@@ -161,12 +160,14 @@ export function OnboardingCard({
                   <Badge tone="info" size="small">Ready</Badge>
                 )}
               </InlineStack>
-              <InlineStack gap="150" blockAlign="center">
+              <div className="rankpilot-icon-row">
                 <ShieldCheckMarkIcon width={18} height={18} fill={step3Complete ? "#008060" : "#5c5f62"} />
-                <Text as="p" variant="bodySm">
-                  24/7 inventory drift monitoring &amp; auto-IndexNow pings.
-                </Text>
-              </InlineStack>
+                <div className="rankpilot-icon-row__text">
+                  <Text as="p" variant="bodySm">
+                    24/7 inventory drift monitoring &amp; auto-IndexNow pings.
+                  </Text>
+                </div>
+              </div>
               {!step3Complete && (
                 <Button
                   variant="secondary"
@@ -178,7 +179,7 @@ export function OnboardingCard({
               )}
             </BlockStack>
           </Box>
-        </InlineStack>
+        </div>
       </BlockStack>
     </Card>
   );

@@ -136,7 +136,7 @@ export function OptimizationModal({
         <BlockStack gap="200">
           {/* Compact score header: one row */}
           <Box padding="200" background="bg-surface-secondary" borderRadius="200">
-            <InlineStack align="space-between" blockAlign="center" gap="200" wrap={false}>
+            <InlineStack align="space-between" blockAlign="center" gap="300">
               <InlineStack gap="150" blockAlign="center" wrap={false}>
                 <Text as="span" variant="headingSm">GEO score</Text>
                 {alreadyOptimized ? (
@@ -316,7 +316,7 @@ export function OptimizationModal({
               {/* Quick Actions Header */}
               <Card background="bg-surface-secondary">
                 <InlineStack align="space-between" blockAlign="center" wrap>
-                  <BlockStack gap="050">
+                  <BlockStack gap="200">
                     <Text as="h3" variant="headingSm" fontWeight="bold">
                       Verified Metafield Payloads &amp; Machine-Readable Schema
                     </Text>

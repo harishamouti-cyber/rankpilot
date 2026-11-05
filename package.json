@@ -9,6 +9,7 @@
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "start": "remix-serve ./build/server/index.js",
     "typecheck": "tsc",
+    "test": "./node_modules/.bin/esbuild tests/collection_seo.test.ts --bundle --platform=node --format=esm --outfile=/tmp/rankpilot-collection-seo.test.mjs && node --test /tmp/rankpilot-collection-seo.test.mjs",
     "setup": "prisma generate && prisma db push"
   },
   "dependencies": {

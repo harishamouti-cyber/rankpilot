@@ -57,53 +57,22 @@ export function SetupGuide({
   return (
     <Card background="bg-surface">
       <BlockStack gap="400">
-        {/* Card Header */}
-        <InlineStack align="space-between" blockAlign="center">
-          <InlineStack gap="300" blockAlign="center">
-            <BlockStack gap="050">
-              <InlineStack gap="200" blockAlign="center" wrap={true}>
-                <Text as="h2" variant="headingMd" fontWeight="bold">
-                  RankPilot Quick-Start Setup
-                </Text>
-                <Badge tone="info">{`${completedCount} of 3 completed`}</Badge>
-                {completedCount === 3 ? (
-                  <Badge tone="success">Setup Complete</Badge>
-                ) : (
-                  <Badge tone="attention">{`${3 - completedCount} Steps Remaining`}</Badge>
-                )}
-              </InlineStack>
-              <Text as="p" variant="bodySm" tone="subdued">
-                Complete these 3 foundational setup steps to get your catalog cited by ChatGPT Search, Perplexity, and Google AI Overviews.
+        <BlockStack gap="300">
+          <InlineStack align="space-between" blockAlign="center" gap="300">
+            <InlineStack gap="200" blockAlign="center" wrap>
+              <Text as="h2" variant="headingMd" fontWeight="bold">
+                RankPilot Quick-Start Setup
               </Text>
-            </BlockStack>
-          </InlineStack>
-
-          <InlineStack gap="300" blockAlign="center">
-            <Box minWidth="160px">
-              <BlockStack gap="100">
-                <InlineStack align="space-between">
-                  <Text as="span" variant="bodySm" fontWeight="semibold">
-                    Progress
-                  </Text>
-                  <Text as="span" variant="bodySm" tone="subdued">
-                    {progressPercent}%
-                  </Text>
-                </InlineStack>
-                <ProgressBar
-                  progress={progressPercent}
-                  tone={completedCount === 3 ? "success" : "primary"}
-                  size="small"
-                />
-              </BlockStack>
-            </Box>
-
-            <InlineStack gap="200" blockAlign="center">
+              <Badge tone="info">{`${completedCount} of 3 completed`}</Badge>
+              {completedCount === 3 ? (
+                <Badge tone="success">Setup Complete</Badge>
+              ) : (
+                <Badge tone="attention">{`${3 - completedCount} Steps Remaining`}</Badge>
+              )}
+            </InlineStack>
+            <InlineStack gap="300" blockAlign="center" wrap={false}>
               {onReplayOnboarding && (
-                <Button
-                  variant="plain"
-                  size="slim"
-                  onClick={onReplayOnboarding}
-                >
+                <Button variant="plain" size="slim" onClick={onReplayOnboarding}>
                   Replay Scan
                 </Button>
               )}
@@ -121,16 +90,37 @@ export function SetupGuide({
               />
             </InlineStack>
           </InlineStack>
-        </InlineStack>
+          <div className="rankpilot-relaxed">
+            <Text as="p" variant="bodySm" tone="subdued">
+              Complete these 3 foundational setup steps to get your catalog cited by ChatGPT Search, Perplexity, and Google AI Overviews.
+            </Text>
+          </div>
+          <Box width="100%" maxWidth="280px">
+            <BlockStack gap="100">
+              <InlineStack align="space-between">
+                <Text as="span" variant="bodySm" fontWeight="semibold">
+                  Progress
+                </Text>
+                <Text as="span" variant="bodySm" tone="subdued">
+                  {progressPercent}%
+                </Text>
+              </InlineStack>
+              <ProgressBar
+                progress={progressPercent}
+                tone={completedCount === 3 ? "success" : "primary"}
+                size="small"
+              />
+            </BlockStack>
+          </Box>
+        </BlockStack>
 
         <Collapsible id="setup-guide-collapsible" open={isOpen} transition={{ duration: "200ms", timingFunction: "ease-in-out" }}>
           <BlockStack gap="400">
             <Divider />
 
-            <InlineStack gap="400" align="space-between">
+            <div className="rankpilot-card-grid">
               {/* STEP 1: CATALOG SYNCED */}
               <Box
-                width="31%"
                 padding="300"
                 background="bg-surface-secondary"
                 borderRadius="200"
@@ -145,22 +135,25 @@ export function SetupGuide({
                     <Badge tone="success" size="small">Completed</Badge>
                   </InlineStack>
 
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    {totalCount} products imported and indexed into RankPilot's GEO monitoring graph.
-                  </Text>
-
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <Icon source={CheckCircleIcon} tone="success" />
-                    <Text as="p" variant="bodySm" tone="success" fontWeight="medium">
-                      Zero-overhead GraphQL active
+                  <div className="rankpilot-relaxed">
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      {totalCount} products imported and indexed into RankPilot's GEO monitoring graph.
                     </Text>
+                  </div>
+
+                  <div className="rankpilot-icon-row">
+                    <Icon source={CheckCircleIcon} tone="success" />
+                    <div className="rankpilot-icon-row__text">
+                      <Text as="p" variant="bodySm" tone="success" fontWeight="medium">
+                        Zero-overhead GraphQL active
+                      </Text>
+                    </div>
                   </div>
                 </BlockStack>
               </Box>
 
               {/* STEP 2: OPTIMIZE FIRST PRODUCT */}
               <Box
-                width="31%"
                 padding="300"
                 background={step2Complete ? "bg-surface-secondary" : "bg-surface-active"}
                 borderRadius="200"
@@ -179,9 +172,11 @@ export function SetupGuide({
                     )}
                   </InlineStack>
 
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    First SKU enriched with structured spec matrix and buyer FAQs.
-                  </Text>
+                  <div className="rankpilot-relaxed">
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      First SKU enriched with structured spec matrix and buyer FAQs.
+                    </Text>
+                  </div>
 
                   {!step2Complete && firstUnoptimizedProduct ? (
                     <Button
@@ -194,11 +189,13 @@ export function SetupGuide({
                       Open Diff
                     </Button>
                   ) : (
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div className="rankpilot-icon-row">
                       <Icon source={CheckCircleIcon} tone="success" />
-                      <Text as="p" variant="bodySm" tone="success" fontWeight="medium">
-                        First product live &amp; cited
-                      </Text>
+                      <div className="rankpilot-icon-row__text">
+                        <Text as="p" variant="bodySm" tone="success" fontWeight="medium">
+                          First product live &amp; cited
+                        </Text>
+                      </div>
                     </div>
                   )}
                 </BlockStack>
@@ -206,7 +203,6 @@ export function SetupGuide({
 
               {/* STEP 3: ACTIVATE AUTOPILOT GUARD */}
               <Box
-                width="31%"
                 padding="300"
                 background="bg-surface-secondary"
                 borderRadius="200"
@@ -225,9 +221,11 @@ export function SetupGuide({
                     )}
                   </InlineStack>
 
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    Catalog monitoring on; changed URLs are sent to Bing via IndexNow.
-                  </Text>
+                  <div className="rankpilot-relaxed">
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      Catalog monitoring on; changed URLs are sent to Bing via IndexNow.
+                    </Text>
+                  </div>
 
                   {!step3Complete ? (
                     <Button
@@ -239,16 +237,18 @@ export function SetupGuide({
                       Enable
                     </Button>
                   ) : (
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div className="rankpilot-icon-row">
                       <Icon source={CheckCircleIcon} tone="success" />
-                      <Text as="p" variant="bodySm" tone="success" fontWeight="medium">
-                        24/7 Guard Active
-                      </Text>
+                      <div className="rankpilot-icon-row__text">
+                        <Text as="p" variant="bodySm" tone="success" fontWeight="medium">
+                          24/7 Guard Active
+                        </Text>
+                      </div>
                     </div>
                   )}
                 </BlockStack>
               </Box>
-            </InlineStack>
+            </div>
           </BlockStack>
         </Collapsible>
       </BlockStack>

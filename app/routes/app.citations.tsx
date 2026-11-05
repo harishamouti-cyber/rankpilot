@@ -672,7 +672,7 @@ export default function CitationsPage() {
             <BlockStack gap="0">
               <Box padding="400" borderBlockEndWidth="025" borderColor="border">
                 <InlineStack align="space-between" blockAlign="center">
-                  <BlockStack gap="050">
+                  <BlockStack gap="200">
                     <Text as="h3" variant="headingSm" fontWeight="bold">
                       Generative Search Engine Citations Breakdown
                     </Text>

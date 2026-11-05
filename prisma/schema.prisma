@@ -204,3 +204,53 @@ model WebhookLog {
   payload     String?
   createdAt   DateTime @default(now())
 }
+
+// Collection SEO suggestions are stored per shop until the merchant approves one.
+// Original field values are kept so undo can restore them.
+model CollectionSeoPreview {
+  id                       String   @id
+  shop                     String
+  collectionId             String
+  collectionTitle          String
+  sourceUpdatedAt          String   @default("")
+  currentSeoTitle          String   @default("")
+  currentSeoDescription    String   @default("")
+  currentDescriptionHtml   String   @default("")
+  suggestedSeoTitle        String
+  suggestedSeoDescription  String
+  suggestedDescriptionHtml String
+  source                   String   @default("rules")
+  productsUsed             Int      @default(0)
+  productsTruncated        Boolean  @default(false)
+  status                   String   @default("PENDING")
+  expiresAt                DateTime
+  createdAt                DateTime @default(now())
+
+  @@index([shop, collectionId])
+}
+
+model CollectionSeoRevision {
+  id                      String   @id
+  shop                    String
+  collectionId            String
+  originalSeoTitle        String   @default("")
+  originalSeoDescription  String   @default("")
+  originalDescriptionHtml String   @default("")
+  appliedSeoTitle         String
+  appliedSeoDescription   String
+  appliedDescriptionHtml  String
+  undone                  Boolean  @default(false)
+  createdAt               DateTime @default(now())
+
+  @@index([shop, collectionId, undone])
+}
+
+model CollectionSeoLock {
+  shop         String
+  collectionId String
+  owner        String
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@id([shop, collectionId])
+}

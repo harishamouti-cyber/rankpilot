@@ -245,10 +245,9 @@ export default function SystemHealthRoute() {
         {/* 2. Three Professional Metric Cards */}
         <Layout>
           <Layout.Section>
-            <InlineStack gap="400" align="space-between">
+            <div className="rankpilot-card-grid">
               {/* Card 1: Catalog Status */}
               <Box
-                width="31%"
                 padding="400"
                 background="bg-surface"
                 borderRadius="200"
@@ -271,7 +270,6 @@ export default function SystemHealthRoute() {
 
               {/* Card 2: Schema Integrity (Renamed from Drift Sentinel) */}
               <Box
-                width="31%"
                 padding="400"
                 background="bg-surface"
                 borderRadius="200"
@@ -301,7 +299,6 @@ export default function SystemHealthRoute() {
 
               {/* Card 3: Webhook Health */}
               <Box
-                width="31%"
                 padding="400"
                 background="bg-surface"
                 borderRadius="200"
@@ -328,7 +325,7 @@ export default function SystemHealthRoute() {
                   </Text>
                 </BlockStack>
               </Box>
-            </InlineStack>
+            </div>
           </Layout.Section>
         </Layout>
 
@@ -408,7 +405,7 @@ export default function SystemHealthRoute() {
                   borderRadius="200"
                 >
                   <InlineStack align="space-between" blockAlign="center">
-                    <BlockStack gap="050">
+                    <BlockStack gap="200">
                       <InlineStack gap="200" blockAlign="center">
                         <Text as="span" fontWeight="bold">
                           {def.key}
@@ -504,7 +501,7 @@ export default function SystemHealthRoute() {
               <BlockStack gap="200">
                 {autopilotLogs.map((log: any) => (
                   <InlineStack key={log.id} align="space-between" blockAlign="center">
-                    <BlockStack gap="050">
+                    <BlockStack gap="200">
                       <InlineStack gap="200" blockAlign="center">
                         <Badge tone="info" size="small">
                           {log.actionType}

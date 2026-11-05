@@ -385,7 +385,7 @@ export async function checkSubscriptionGating({
   skuCount = 1,
 }: {
   shop?: string;
-  feature: "BULK_OPTIMIZE" | "AUTOPILOT" | "SPEC_MATRIX" | "BUYER_FAQ" | "COMPETITOR_STEAL";
+  feature: "BULK_OPTIMIZE" | "AUTOPILOT" | "SPEC_MATRIX" | "BUYER_FAQ" | "COMPETITOR_STEAL" | "COLLECTION_SEO";
   skuCount?: number;
 }): Promise<{ allowed: boolean; requiredPlan?: PlanId; reason?: string }> {
   return { allowed: true };

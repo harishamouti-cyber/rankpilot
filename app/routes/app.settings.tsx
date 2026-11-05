@@ -245,7 +245,7 @@ export default function SettingsRoute() {
                   </Text>
                   <Divider />
                   <InlineStack align="space-between" blockAlign="center">
-                    <BlockStack gap="050">
+                    <BlockStack gap="200">
                       <Text as="p" variant="bodyMd" fontWeight="semibold">
                         Cancel Subscription or Remove App
                       </Text>
