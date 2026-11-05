@@ -1344,6 +1344,10 @@ export default function AppDashboard() {
       }}
       secondaryActions={[
         {
+          content: "Collection SEO",
+          onAction: () => navigate(`/app/collections?shop=${encodeURIComponent(shop)}`),
+        },
+        {
           content: "Sync Store Products",
           icon: RefreshIcon,
           loading: isSyncingStore,
