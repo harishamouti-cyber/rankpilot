@@ -28,16 +28,16 @@ function FieldColumn({ label, fields }: { label: string; fields: ComparisonField
     ["Collection description", plainTextFromHtml(fields.descriptionHtml)],
   ];
   return (
-    <BlockStack gap="300">
+    <BlockStack gap="400">
       <Text as="h3" variant="headingSm">
         {label}
       </Text>
       {rows.map(([name, value]) => (
-        <BlockStack gap="100" key={name}>
+        <BlockStack gap="200" key={name}>
           <Text as="p" variant="bodySm" tone="subdued">
             {name}
           </Text>
-          <div style={{ maxHeight: 140, overflow: "auto" }}>
+          <div className="rankpilot-relaxed" style={{ maxHeight: 160, overflow: "auto" }}>
             <Text as="p" variant="bodyMd">
               {value || "Empty"}
             </Text>
@@ -106,7 +106,7 @@ export function CollectionSeoModal({
               <p>{success}</p>
             </Banner>
           ) : null}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
+          <div className="rankpilot-pair-grid">
             <FieldColumn label="Current" fields={current} />
             <FieldColumn
               label="Suggested"

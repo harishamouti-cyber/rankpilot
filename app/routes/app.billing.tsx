@@ -590,7 +590,7 @@ export default function BillingPage() {
               {/* Price & Guarantee */}
               <Box padding="300" background="bg-surface-secondary" borderRadius="200">
                 <InlineStack align="space-between" blockAlign="center">
-                  <BlockStack gap="050">
+                  <BlockStack gap="200">
                     <div style={{ display: "inline-flex", alignItems: "baseline", gap: "6px" }}>
                       <Text as="span" variant="heading3xl" fontWeight="bold">
                         $29
@@ -633,14 +633,14 @@ export default function BillingPage() {
                   "Competitor Semantic Gap Stealer (Analyze Amazon & DTC competitors)",
                   "Zero Storefront Speed Impact (100% background processing via Shopify API)",
                 ].map((feature, idx) => (
-                  <InlineStack key={idx} gap="300" blockAlign="center">
-                    <div style={{ color: "#008060", display: "flex", alignItems: "center" }}>
-                      <CheckIcon width={18} height={18} fill="#008060" />
+                  <div key={idx} className="rankpilot-icon-row">
+                    <CheckIcon width={18} height={18} fill="#008060" />
+                    <div className="rankpilot-icon-row__text">
+                      <Text as="span" variant="bodyMd">
+                        {feature}
+                      </Text>
                     </div>
-                    <Text as="span" variant="bodyMd">
-                      {feature}
-                    </Text>
-                  </InlineStack>
+                  </div>
                 ))}
               </BlockStack>
 
@@ -651,7 +651,7 @@ export default function BillingPage() {
                 <BlockStack gap="300">
                   <Box padding="300" background="bg-surface-success" borderRadius="200">
                     <InlineStack align="space-between" blockAlign="center">
-                      <BlockStack gap="050">
+                      <BlockStack gap="200">
                         <Text as="p" variant="bodySm" fontWeight="bold">
                           RankPilot Pro active
                         </Text>

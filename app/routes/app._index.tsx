@@ -1188,7 +1188,7 @@ export default function AppDashboard() {
                   {product.title}
                 </Text>
               </Tooltip>
-              <InlineStack gap="100">
+              <InlineStack gap="200" blockAlign="center">
                 <Text as="span" variant="bodySm" tone="subdued" truncate>
                   {product.vendor}
                 </Text>
@@ -1202,7 +1202,7 @@ export default function AppDashboard() {
 
         {/* Price & Stock */}
         <IndexTable.Cell>
-          <BlockStack gap="050">
+          <BlockStack gap="150">
             <Text as="span" variant="bodyMd" fontWeight="semibold">
               ${product.priceRange.minVariantPrice.amount}{" "}
               {product.priceRange.minVariantPrice.currencyCode}
@@ -1235,7 +1235,7 @@ export default function AppDashboard() {
 
         {/* Minimalist 6px Status Dot & Label (Eliminates Badge Soup) */}
         <IndexTable.Cell>
-          <InlineStack gap="150" blockAlign="center">
+          <InlineStack gap="200" blockAlign="center">
             <div
               style={{
                 width: 6,
@@ -1448,7 +1448,6 @@ export default function AppDashboard() {
                       borderRadius: "50%",
                       backgroundColor: "#f59e0b",
                       boxShadow: "0 0 10px #f59e0b",
-                      marginTop: 4,
                       flexShrink: 0,
                     }}
                   />
@@ -1461,16 +1460,17 @@ export default function AppDashboard() {
                         Action Required
                       </Badge>
                     </InlineStack>
-                    <Text as="p" variant="bodySm">
-                      {`${unoptimizedProducts.length} product${
-                        unoptimizedProducts.length > 1 ? "s have" : " has"
-                      } no spec table, buyer FAQs or structured data yet. Optimize to add them from your real product data.`}
-                    </Text>
+                    <div className="rankpilot-relaxed">
+                      <Text as="p" variant="bodySm">
+                        {`${unoptimizedProducts.length} product${
+                          unoptimizedProducts.length > 1 ? "s have" : " has"
+                        } no spec table, buyer FAQs or structured data yet. Optimize to add them from your real product data.`}
+                      </Text>
+                    </div>
                   </BlockStack>
                 </InlineStack>
 
-                <div style={{ marginTop: 16 }}>
-                  <InlineStack gap="300" blockAlign="center">
+                <InlineStack gap="300" blockAlign="center">
                     <Button
                       icon={WandMinimalIcon}
                       variant="primary"
@@ -1481,7 +1481,6 @@ export default function AppDashboard() {
                       {`Optimize Unready Products (${Math.max(unoptimizedProducts.length * 3, 6)}s)`}
                     </Button>
                   </InlineStack>
-                </div>
               </InlineStack>
             </BlockStack>
           </Card>
@@ -1498,8 +1497,8 @@ export default function AppDashboard() {
                     boxShadow: "0 0 8px #008060",
                   }}
                 />
-                <BlockStack gap="050">
-                  <InlineStack gap="200" blockAlign="center">
+                <BlockStack gap="200">
+                  <InlineStack gap="200" blockAlign="center" wrap>
                     <Text as="h3" variant="headingSm" fontWeight="bold">
                       Autopilot Catalog Guard: ACTIVE
                     </Text>
@@ -1510,9 +1509,11 @@ export default function AppDashboard() {
                       {`Plan: ${setting.plan}`}
                     </Badge>
                   </InlineStack>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    All catalog SKUs are GEO-synchronized with Google AI &amp; ChatGPT Search. No storefront scripts.
-                  </Text>
+                  <div className="rankpilot-relaxed">
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      All catalog SKUs are GEO-synchronized with Google AI &amp; ChatGPT Search. No storefront scripts.
+                    </Text>
+                  </div>
                 </BlockStack>
               </InlineStack>
               <InlineStack gap="300" blockAlign="center">
@@ -1543,10 +1544,9 @@ export default function AppDashboard() {
         {/* ========================================================================= */}
         <Layout>
           <Layout.Section>
-            <InlineStack gap="400" align="space-between">
+            <div className="rankpilot-metric-grid">
               {/* Metric 1: Total Products */}
               <Box
-                width="23%"
                 padding="400"
                 background="bg-surface"
                 borderRadius="200"
@@ -1569,7 +1569,6 @@ export default function AppDashboard() {
 
               {/* Metric 2: AI-Ready % */}
               <Box
-                width="23%"
                 padding="400"
                 background="bg-surface"
                 borderRadius="200"
@@ -1599,7 +1598,6 @@ export default function AppDashboard() {
 
               {/* Metric 3: Indexed Pings (Interactive Modal Trigger) */}
               <Box
-                width="23%"
                 padding="400"
                 background="bg-surface"
                 borderRadius="200"
@@ -1630,7 +1628,6 @@ export default function AppDashboard() {
 
               {/* Metric 4: Stored Revisions (Interactive Modal Trigger) */}
               <Box
-                width="23%"
                 padding="400"
                 background="bg-surface"
                 borderRadius="200"
@@ -1662,7 +1659,7 @@ export default function AppDashboard() {
                   </BlockStack>
                 </div>
               </Box>
-            </InlineStack>
+            </div>
           </Layout.Section>
         </Layout>
 
